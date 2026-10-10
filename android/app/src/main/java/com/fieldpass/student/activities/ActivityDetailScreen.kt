@@ -59,42 +59,39 @@ private fun DetailContent(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text(activity.name, style = MaterialTheme.typography.headlineSmall)
-        Text(stringResource(R.string.activity_venue_format, activity.venueName))
-        Text(stringResource(R.string.activity_schedule_format, TimeFormat.formatRange(activity.startsAt, activity.endsAt)))
-        Text(requiredText(), style = MaterialTheme.typography.bodySmall)
-        refreshError?.let { Text(stringResource(it.messageRes), color = MaterialTheme.colorScheme.error) }
-
-        ActivityActions.checkpointToShow(activity)?.let { window ->
-            SectionCard {
-                Text(
-                    stringResource(R.string.activity_checkpoint_open_format, TimeFormat.formatTime(window.closesAt)),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-            }
-        }
-
-        Text(stringResource(R.string.activity_next_heading), style = MaterialTheme.typography.titleMedium)
         val actions = if (needsEnrollment) emptyList() else ActivityActions.visible(activity)
-        if (needsEnrollment) {
-            SectionCard {
+        SectionCard {
+            Text(activity.name, style = MaterialTheme.typography.headlineSmall)
+            Text(
+                stringResource(R.string.activity_subtitle_format, activity.venueName, TimeFormat.formatRange(activity.startsAt, activity.endsAt)),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            ProgressTracker(ActivityProgress.steps(activity), activity.myAttendance?.status, Modifier.padding(vertical = 8.dp))
+            if (needsEnrollment) {
                 Text(stringResource(R.string.activities_enrollment_notice))
                 SecondaryButton(stringResource(R.string.activities_open_photo), onOpenPhoto)
+            } else if (actions.isEmpty()) {
+                Text(stringResource(R.string.activity_no_actions), style = MaterialTheme.typography.bodyMedium)
             }
-        } else if (actions.isEmpty()) {
-            Text(stringResource(R.string.activity_no_actions))
+            actions.forEach { action ->
+                PrimaryButton(stringResource(StatusPresentation.actionLabel(action)), onClick = { onAction(activity.id, action) }, showArrow = true)
+            }
         }
-        actions.forEach { action ->
-            PrimaryButton(stringResource(StatusPresentation.actionLabel(action)), onClick = { onAction(activity.id, action) })
+        refreshError?.let { Text(stringResource(it.messageRes), color = MaterialTheme.colorScheme.error) }
+        if (actions.isNotEmpty()) {
+            Text(stringResource(R.string.activity_submit_note), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
-        Text(stringResource(R.string.activity_record_heading), style = MaterialTheme.typography.titleMedium)
-        val record = activity.myAttendance
-        if (record == null) {
-            Text(stringResource(R.string.activity_no_events))
-        } else {
-            RecordSummary(record)
+        SectionCard {
+            Text(stringResource(R.string.activity_record_heading), style = MaterialTheme.typography.titleMedium)
+            val record = activity.myAttendance
+            if (record == null) {
+                Text(stringResource(R.string.activity_no_events))
+            } else {
+                RecordSummary(record)
+            }
         }
-        Text(stringResource(R.string.activity_times_note), style = MaterialTheme.typography.bodySmall)
+        Text(stringResource(R.string.activity_times_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

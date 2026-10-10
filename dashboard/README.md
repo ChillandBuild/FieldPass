@@ -15,6 +15,9 @@ cp .env.example .env.local     # then edit
 npm run dev                    # http://localhost:5173, also reachable on the LAN (--host)
 ```
 
+To use another port, run `npm run dev -- --port 5174` and add that origin (for example
+`http://localhost:5174`) to `CORS_ORIGINS` in `backend/.env`, then restart the backend.
+
 ## Environment variables
 
 | Variable | Meaning |
@@ -124,4 +127,20 @@ on 127.0.0.1:5173 in real mode (override with `E2E_DASHBOARD_PORT`), runs the sp
 temporary data. `CORS_ORIGINS` is set for the run through the environment, so `backend/.env` is not touched. Ports 8000
 and 5173 must be free. The last test also writes `screenshots/real-register-1440.png` and `real-register-320.png`.
 
-Not covered here: missing check-out and attempt expiry depend on the server clock and are covered by backend unit tests.
+### Timing spec (second backend)
+
+`e2e/timing.spec.ts` runs after the main spec and starts its OWN real backend on 127.0.0.1:8001 (override with
+`E2E_SHORT_BACKEND_PORT`; keep it free) with `ATTEMPT_TTL_SECONDS=4` and `CHECKOUT_GRACE_MINUTES=0` on throwaway data.
+The main spec's backend (default settings) stays untouched. Nothing is faked: the tests wait in real time, polling the
+server's own clock, and the dashboard in that spec is pointed at port 8001 through the saved "Server address". It proves:
+
+- Attempt expiry: a selfie and location submitted after the attempt lifetime get `410 attempt_expired` in the error
+  envelope, the register keeps showing no arrival, and a fresh attempt is then shown as Recorded.
+- Missing check-out: a check-in on an activity that then ends shows "Missing checkout: incomplete" in the open register by
+  its normal 5 s polling (no reload), with no duration or hours text in the row, `complete` false, and the student's
+  `/attendance/me` showing `missing_checkout: true` and no `next_actions`.
+- Stale enrollment: approving a card whose photo the student has since replaced gets `404`, shows "This student uploaded a
+  new photo. The list has been refreshed.", reloads the list with the new pending photo, and the student stays `pending`.
+
+The whole `npm run e2e` takes about a minute and a half because of these real waits. To run only this spec:
+`npx playwright test -c e2e/playwright.config.ts timing`.

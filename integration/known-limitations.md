@@ -69,6 +69,9 @@ yet tested.
     JVM against the real backend. These are unverified on hardware: camera orientation (front camera preview and
     the saved selfie being upright), permission prompts, how long a GPS fix takes, the Android Keystore token
     store, and connectivity over a phone hotspot. Treat the first full run as a test, not a demo.
+    The setup steps were also walked through from a fresh clone on 2026-10-10 (see "Verified on" at the top of
+    the runbook), but only up to the point where a phone is needed. The macOS firewall in its enabled state and
+    hotspot client isolation have not been tried.
 18. **Phone clock matters.** The app derives `location_captured_at` from the phone's clock minus the age of the fix.
     A badly wrong phone clock can cause `location_stale` from the server.
 

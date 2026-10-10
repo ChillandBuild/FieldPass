@@ -1,5 +1,35 @@
 # FieldPass demo runbook (laptop + Android phone + phone hotspot)
 
+> **Verified on** macOS 26.7 (build 25G229), 2026-10-10, by following the docs literally in a fresh `git clone`
+> (backend on port 8002 and dashboard on port 5174, because 8000 and 5173 were in use).
+>
+> **Executed from the fresh clone and worked** (with the fixes now in this runbook):
+> - Section 3: venv with Python 3.11, install, `.env`, secrets, models, seed. Seeding with equal passwords was
+>   refused with the documented message and created no database.
+> - Section 4: `--demo-activity --lat 12.9716 --lng 77.5946`.
+> - Section 5: `./run.sh 8002`. `/api/v1/health` answered 200 on `127.0.0.1` and on the laptop's `en0` address
+>   (so it listens on all interfaces). `faculty1` and `student1` signed in with their own passwords; `faculty1`
+>   with the student password got 401 `invalid_credentials`; `/docs`, `/redoc` and `/openapi.json` gave 404; a 7 MB
+>   enrollment upload got 413 `image_too_large`.
+> - Section 8 and the CORS row of the troubleshooting table: the symptom and the fix were both reproduced.
+> - Section 9: dashboard in real mode in a headless browser. The login page showed no FIXTURE MODE banner, "Test
+>   connection" read "Connected", and `faculty1` signed in to the Enrollments screen.
+> - Section 10, build only: `./gradlew assembleDebug` produced `android/app/build/outputs/apk/debug/app-debug.apk`.
+> - Section 6: the firewall commands were run read-only and the wording was checked against macOS 26.7. The
+>   firewall was off on that laptop.
+> - "After the demo": steps 1 and 2 (stop servers, `rm -r backend/data`). Step 3 (CSV files) and step 4
+>   (`backend/tests/samples/`) had nothing to delete in a fresh clone.
+> - Test commands: backend `pytest` (223 passed, 1 skipped), `pytest --cov=app` (98 percent total),
+>   dashboard `npm run typecheck`, `npm run lint`, `npm test` (80 passed).
+>
+> **NOT executed**: section 1 (hotspot) and section 2 on a hotspot (`ipconfig getifaddr en0` itself worked and printed
+> an address, but the laptop was not on a hotspot), section 7 (phone
+> browser check), the `adb` steps of section 10 (install, `adb devices`, `adb uninstall`), the app's server address,
+> login and camera/location behaviour, section 11 on the phone, hotspot client isolation, the firewall in its
+> enabled state (adding Python in Options, the allow pop-up), any scenario in `checklist.md` or `demo-script.md`,
+> `npm run e2e` (needs face photos), `npm run screenshots`, `android/scripts/integration-test.sh`,
+> `./gradlew testDebugUnitTest` and `lintDebug`, and a first Gradle build with an empty cache.
+
 This runbook gets the whole demo running with no campus Wi-Fi. Follow the steps in order.
 Allow about 45 minutes the first time. The "missing checkout" scenario needs an extra short
 activity prepared at least 40 minutes before the demo; see [demo-script.md](demo-script.md).
@@ -48,11 +78,17 @@ cp .env.example .env
 .venv/bin/python -m app.gen_secrets
 ```
 
+The backend needs Python 3.11. `/Users/prem/.local/bin/python3.11` exists on the demo laptop only (a uv-managed
+copy; `python3.11 --version` printed 3.11.15 there). On another machine, install Python 3.11 first and put its own
+path in the first command. The system's plain `python3` is a different version (3.14 on the demo laptop) and is
+not the one to use. `run.sh` prints the same hard-coded path in its "No virtualenv" message.
+
 The last command prints four lines: `JWT_SECRET=...`, `PHOTO_ENCRYPTION_KEY=...`, `SEED_PASSWORD=...` and
 `FACULTY_SEED_PASSWORD=...`. The two password lines are different random suggestions.
 
-Open `backend/.env` in an editor and set these values. You can paste all four printed lines, or choose your
-own passwords. Do not put the file in chat, email or git.
+Open `backend/.env` in an editor and set these values. `.env` already contains an empty line for each setting
+(for example `JWT_SECRET=`). Put the printed value after the `=` on that line. Do not add a second line for the
+same name. You can use all four printed values, or choose your own passwords. Do not put the file in chat, email or git.
 
 | Setting | What to put | Notes |
 |---|---|---|
@@ -75,7 +111,8 @@ Create the demo accounts. It is safe to run again. If you change `SEED_PASSWORD`
 .venv/bin/python -m app.seed
 ```
 
-You should see a line like `Seed users ready (4 created, 0 already present).`
+You should see a line like `Seed users ready (4 created, 0 already present).` The model download printed
+`downloaded: face_detection_yunet_2023mar.onnx 232589 bytes` and `downloaded: face_recognition_sface_2021dec.onnx 38696353 bytes`.
 
 If either password (or `JWT_SECRET` or `PHOTO_ENCRYPTION_KEY`) is missing or empty, the seed command stops and
 prints `Seeding stopped: Missing required setting(s): ...` naming it. If the two passwords are equal, it stops and
@@ -108,8 +145,10 @@ cd backend
 .venv/bin/python -m app.seed --demo-activity --lat 12.9716 --lng 77.5946
 ```
 
-Replace the two numbers with your own. This creates "Demo Site Visit": starts at the moment you run the
-command, lasts 4 hours from then, 100 m radius, all three students on the roster. Run it again for a fresh one.
+Replace the two numbers with your own. It prints a line like
+`Demo activity created: act_08d5821e6ee0 at (12.9716, 77.5946), 4 h from now.`, after a `Seed users ready (0 created,
+4 already present).` line (it runs the account seed first, which is harmless). This creates "Demo Site Visit": starts at
+the moment you run the command, lasts 4 hours from then, 100 m radius, all three students on the roster. Run it again for a fresh one.
 Do not run it the evening before: check-in closes 4 hours after you ran it.
 
 You can also create activities in the dashboard (Activities, then "New activity"). There you can set the
@@ -135,7 +174,20 @@ cd backend
 It is the same as running uvicorn with `--host 0.0.0.0 --port 8000`. To use another port: `./run.sh 9000`.
 Leave this terminal open. Watching it is the quickest way to see errors.
 
+Wait for the line `Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)`. The first start in a new virtual
+environment took about 45 seconds on 2026-10-10 (the `run.sh` line appears at once, then nothing for a while), and
+the next start took about 1 second. During the wait the port is closed and `curl` fails. This is not an error.
+
 If the server were bound to `127.0.0.1` (localhost) only, the phone could not reach it. `run.sh` already uses `0.0.0.0`.
+You can prove it from the laptop, before involving the phone. Both commands must print the same answer:
+
+```bash
+curl http://127.0.0.1:8000/api/v1/health
+curl http://$(ipconfig getifaddr en0):8000/api/v1/health
+```
+
+Each prints `{"status":"ok","server_time":"..."}`. If the first works and the second does not answer, the server is
+bound to localhost only or the firewall (step 6) blocks it. (If you started on another port, use that port.)
 
 The interactive API docs (`/docs`, `/redoc`, `/openapi.json`) are off by default. They need no login, so leave
 them off for the demo. `ENABLE_DOCS=true` in `backend/.env` turns them on.
@@ -150,13 +202,32 @@ Check the state (read-only):
 /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate
 ```
 
-- If it says "disabled", nothing blocks you. Go on.
-- If it says "enabled": open System Settings, go to Network, then Firewall. Either turn it off for the
-  demo, or choose Options and add the Python program that runs the backend
-  (`backend/.venv/bin/python`) with "Allow incoming connections". The first time the backend starts,
-  macOS may also show a pop-up asking to allow incoming connections for Python. Choose Allow.
+- If it says "Firewall is disabled. (State = 0)", nothing blocks you. Go on. This is the text printed on macOS
+  26.7 when the firewall is off. When it is on, the text starts "Firewall is enabled."
+- If it says "enabled": open System Settings, go to Network, then Firewall. Either turn the Firewall switch off
+  for the demo, or choose "Options..." and add the Python program that runs the backend with
+  "Allow incoming connections". In the same Options window, "Block all incoming connections" must be off,
+  because it blocks everything, including Python. The first time the backend starts, macOS may also show a pop-up
+  asking to allow incoming connections for Python. Choose Allow.
 
-The exact menu names differ slightly between macOS versions. The firewall steps are not described in the repo's own README files.
+Two more read-only commands help:
+
+```bash
+/usr/libexec/ApplicationFirewall/socketfilterfw --getblockall     # "block all" must be disabled
+/usr/libexec/ApplicationFirewall/socketfilterfw --listapps        # programs with a rule, and their setting
+```
+
+Which Python to allow: `backend/.venv/bin/python` is only a link. macOS names the real file the link points to.
+Print it with `python3 -c "import os; print(os.path.realpath('.venv/bin/python'))"` from `backend/`. On the demo
+laptop it printed `/Users/prem/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/bin/python3.11`.
+Add that path if you add the program by hand. `--listapps` showed 7 built-in programs, each marked
+"(Allow incoming connections)", and no FieldPass entry.
+
+Checked on macOS 26.7 (2026-10-10): System Settings, Network has a Firewall section. Its text, read from the
+system's Network settings file, offers the Firewall switch, an "Options..." button, "Block all incoming
+connections", and per-program "Allow incoming connections" or "Block incoming connections". The firewall was
+disabled on that laptop, and the settings were not changed, so adding the program through the Options window and
+the pop-up were not tried. The repo's own README files do not describe the firewall.
 
 ## 7. Check the backend from the phone's browser
 
@@ -200,6 +271,9 @@ CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://192.168.43.20:51
 After editing `.env`, stop the backend (Ctrl+C) and start it again with `./run.sh`. Settings are read at startup.
 The simplest setup is to open the dashboard on the same laptop that runs the backend, at `http://localhost:5173`.
 
+If port 5173 is taken and you start the dashboard on another port (step 9 shows how), the new origin is not in the
+default list. Add it, for example `http://localhost:5174`, or the login screen cannot reach the backend.
+
 ## 9. Start the dashboard in real mode
 
 ```bash
@@ -220,8 +294,12 @@ You can leave `VITE_API_BASE_URL` as is; you will set the address on the login s
 npm run dev
 ```
 
-Open `http://localhost:5173` in the browser. In "Server address" type your base URL
-(`http://<laptop-ip>:8000`) and press "Test connection". It should show the server time. The address is
+To use another port, put the option after `--`: `npm run dev -- --port 5174`. Then open that port instead, and add
+its origin to `CORS_ORIGINS` (step 8). The dashboard's own README does not describe this option.
+
+Open `http://localhost:5173` in the browser. The "Server address" field starts filled with the example address
+`http://192.168.43.10:8000`. Replace it with your base URL
+(`http://<laptop-ip>:8000`) and press "Test connection". It should show "Connected. Server time ...". The address is
 saved in the browser. Sign in as `faculty1` with `FACULTY_SEED_PASSWORD`.
 
 If you edit `.env.local`, restart `npm run dev`.
@@ -247,6 +325,11 @@ export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
 adb devices
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
+
+`./gradlew assembleDebug` ends with `BUILD SUCCESSFUL` and writes `app/build/outputs/apk/debug/app-debug.apk`
+(about 18 MB). `ANDROID_HOME` only lasts for that terminal window. Instead of exporting it each time, create
+`android/local.properties` with the line `sdk.dir=/opt/homebrew/share/android-commandlinetools`. Both ways were
+tried and both built the APK. With neither, Gradle stops with "SDK location not found".
 
 `adb devices` must list your phone as `device`. If it says `unauthorized`, accept the prompt on the phone.
 If `adb` is not found, use `/opt/homebrew/share/android-commandlinetools/platform-tools/adb`.
@@ -288,7 +371,7 @@ Find the symptom, check the likely cause, apply the fix. Error codes in `code` s
 | Same as above, and the laptop browser works only with `localhost`, not with the laptop's hotspot address | **Server bound to localhost.** It was started with plain uvicorn, which listens on `127.0.0.1` only | Stop it. Start with `./run.sh`, which uses `--host 0.0.0.0` |
 | Same as above, and the address and firewall are right | **Hotspot client isolation.** Some hotspots stop connected devices from talking to each other | Try a different phone as the hotspot, or another hotspot band or setting if your phone has one. Test with the phone browser first. The setting's name differs per phone and is not described in the repo |
 | Health works but the app says it cannot connect, or "Test connection" fails at once | **Cleartext HTTP blocked.** A release build (`assembleRelease`) was installed. Release builds forbid plain `http://` | Install the debug build: `./gradlew assembleDebug`, then `adb install -r app/build/outputs/apk/debug/app-debug.apk` |
-| Dashboard login screen: "Test connection" fails, or the browser console says a request was blocked by CORS, though the phone browser reaches the health URL | The dashboard's address is not in `CORS_ORIGINS` | Step 8. Add the exact origin (for example `http://localhost:5173`), save `.env`, restart the backend. Check "Server address" has the right IP and port |
+| Dashboard login screen: "Test connection" fails, or the browser console says a request was blocked by CORS, though the phone browser reaches the health URL | The dashboard's address is not in `CORS_ORIGINS`. The login screen shows "Could not reach the server. Check the server address and your network." This is the same text as for a wrong address. The browser console (developer tools) tells them apart: for CORS it says `has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource`. Checked with the dashboard on `http://localhost:5174` while `CORS_ORIGINS` listed only port 5173 | Step 8. Add the exact origin of the page (for example `http://localhost:5173`, or `http://localhost:5174` if you started the dashboard on another port), save `.env`, restart the backend. After that fix, "Test connection" read "Connected. Server time ..." and `faculty1` signed in. Also check "Server address" has the right IP and port |
 | `enrollment_not_approved` when a student taps Check in | The student has no approved enrollment photo. `student3` was never enrolled, or the student replaced their photo (approval does not carry over) | Student: My photo, take a photo, "Send for approval". Faculty: dashboard, Enrollments, tick "I have confirmed this person's identity", then "Approve photo" |
 | Every check-in is `needs_review` with a location reason, even indoors | The location rule (see worked example below). Indoors, the phone's reported accuracy is large | See "The location rule" below. Fix the venue coordinates, raise the radius on a new activity, or improve the GPS fix |
 | `location_stale` | The location reading is older than 60 s (`LOCATION_MAX_AGE_SECONDS`). Usually the phone's clock is wrong: the app derives the reading time from the phone's clock minus the age of the fix | On the phone, turn on automatic date and time. Compare the phone's time with the `server_time` from the health URL. Then retry the same attempt |
@@ -344,16 +427,25 @@ What to change, in this order:
 Enrollment photos and face data are biometric data of real people. Delete them when the demo is over.
 
 1. Stop the backend (Ctrl+C in its terminal) and the dashboard.
-2. Delete the database and the encrypted photos. With the default settings both live in `backend/data/`:
+2. Delete the database and the encrypted photos. With the default settings both live in `backend/data/`.
+   Run this from the repository root (the folder that holds `backend/` and `dashboard/`), not from inside `backend/`:
 
 ```bash
 rm -r backend/data
+ls backend/data     # must print: No such file or directory
 ```
 
 The exact paths, from `backend/app/config.py`:
 
 - Database: `backend/data/fieldpass.db` (setting `DATABASE_PATH`, default `data/fieldpass.db`, relative to `backend/`).
-- Encrypted enrollment photos: `backend/data/photos/` (setting `PHOTO_DIR`, default `data/photos`).
+  SQLite also keeps `fieldpass.db-wal` and `fieldpass.db-shm` next to it while the server has run. They are in the
+  same folder, so `rm -r backend/data` removes them too.
+- Encrypted enrollment photos: `backend/data/photos/` (setting `PHOTO_DIR`, default `data/photos`). One `.enc` file
+  per enrollment. The folder is created by the first enrollment upload, so it does not exist if nobody enrolled.
+
+Checked on 2026-10-10 in a fresh clone: after one enrollment upload, `backend/data/` held `fieldpass.db`,
+`fieldpass.db-shm`, `fieldpass.db-wal` and `photos/` with one `.enc` file. After `rm -r backend/data` from the
+repository root, `backend/data` and `backend/data/photos` no longer existed.
 
 If you changed `DATABASE_PATH` or `PHOTO_DIR` in `backend/.env`, delete those locations too. The
 database also holds each student's face embedding (a list of numbers that describes a face), so

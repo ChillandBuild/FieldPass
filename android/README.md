@@ -59,6 +59,16 @@ accounts, runs the tests, then stops the server and deletes the temp data; secre
 android/scripts/integration-test.sh          # optional port argument, e.g. 8002
 ```
 
+The script makes two runs, each on a fresh backend on the same port, and exits non-zero if either fails:
+
+1. Default settings: `BackendContractTest` (the 20 steps above).
+2. `ATTEMPT_TTL_SECONDS=4` and `CHECKOUT_GRACE_MINUTES=0`: `TimingContractTest`, which also needs
+   `FIELDPASS_SHORT_TIMING=1` (the script sets it; the test is skipped without it). It waits in real time on the
+   server's own clock, with nothing faked, and checks that a submit after expiry maps to `ErrorCode.ATTEMPT_EXPIRED`
+   (410, nothing recorded, then a fresh attempt is recorded), that a record with `missing_checkout: true` parses in the
+   repository (`missingCheckout`, not complete, no next actions) once the activity has ended, and that a check-out
+   attempt after the end maps to `OUTSIDE_ACTIVITY_WINDOW`.
+
 The steps share state, so use a FRESH database each run (student1 must still have enrollment `none`);
 the script does this for you. It uses `backend/tests/samples/lena.jpg` if present, otherwise downloads
 OpenCV's `lena.jpg`. Not covered on the JVM: CameraX, `JpegProcessor` (Bitmap), the Keystore token
@@ -118,6 +128,11 @@ screen. Release builds cannot enable it.
 - Recorded times are points of observation, not proof of continuous presence.
 - Not yet run on a physical device. The HTTP/repository layer has been run on the JVM against the real
   backend (see Contract tests); camera, Bitmap processing, Keystore and location are untested on hardware.
+- Run end to end on an API 36 emulator (2026-10-10) against a real backend with the real face engine: login,
+  camera and location permission refusal and recovery, enrollment and approval, check-in, check-out, history
+  refresh after a faculty decision, and the 90 s attempt expiry ("This attempt timed out", nothing recorded on
+  the server). The emulator camera fed a fixed test image, so this says nothing about real selfies, rotation
+  or indoor GPS. Screenshots stay local (`android/screenshots/emulator/` is git-ignored because they show a face).
 - `location_captured_at` is derived from the phone's clock minus the fix's age. A badly wrong phone
   clock could cause `location_stale` from the server.
 - Faculty features (review, observations, roster) are not in this app; use the dashboard.

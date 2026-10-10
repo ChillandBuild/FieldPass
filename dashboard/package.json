@@ -11,7 +11,10 @@
     "lint": "eslint src tests e2e",
     "test": "vitest run",
     "screenshots": "node scripts/screenshots.mjs",
-    "e2e": "playwright test -c e2e/playwright.config.ts"
+    "e2e": "playwright test -c e2e/playwright.config.ts",
+    "e2e:firefox": "E2E_BROWSER=firefox playwright test -c e2e/playwright.config.ts",
+    "e2e:webkit": "E2E_BROWSER=webkit playwright test -c e2e/playwright.config.ts",
+    "e2e:browsers": "npm run e2e && npm run e2e:firefox && npm run e2e:webkit"
   },
   "dependencies": {
     "react": "^19.3.0",

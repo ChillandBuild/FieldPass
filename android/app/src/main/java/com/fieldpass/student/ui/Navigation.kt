@@ -1,5 +1,10 @@
 package com.fieldpass.student.ui
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -68,7 +73,7 @@ fun AppNavigation(
                 key = "detail-$id",
                 factory = viewModelFactory { initializer { ActivityDetailViewModel(id, container.repository) } },
             )
-            DetailWithRefresh(vm, navController)
+            SystemBarsSafe { DetailWithRefresh(vm, navController) }
         }
         composable(
             Routes.CAPTURE,
@@ -84,9 +89,15 @@ fun AppNavigation(
                     }
                 },
             )
-            AttendanceCaptureScreen(vm, onFinished = { navController.popBackStack() })
+            SystemBarsSafe { AttendanceCaptureScreen(vm, onFinished = { navController.popBackStack() }) }
         }
     }
+}
+
+/** Keeps a screen without its own Scaffold clear of the status and navigation bars (the app draws edge to edge). */
+@Composable
+private fun SystemBarsSafe(content: @Composable () -> Unit) {
+    Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) { content() }
 }
 
 @Composable

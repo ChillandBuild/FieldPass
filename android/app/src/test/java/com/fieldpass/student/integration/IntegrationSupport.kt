@@ -34,12 +34,16 @@ import javax.imageio.ImageIO
  * FIELDPASS_PASSWORD  the SEED_PASSWORD of that backend: student accounts (never printed)
  * FIELDPASS_FACULTY_PASSWORD  the FACULTY_SEED_PASSWORD of that backend: faculty1 (never printed)
  * FIELDPASS_FACE_IMAGE path to a JPEG with exactly one clear face (OpenCV's lena.jpg works)
+ * FIELDPASS_SHORT_TIMING  set to 1 ONLY when that backend runs with ATTEMPT_TTL_SECONDS=4 and
+ *                      CHECKOUT_GRACE_MINUTES=0 (enables TimingContractTest; BackendContractTest needs the defaults)
  */
 object IntegrationEnv {
     val apiUrl: String? = System.getenv("FIELDPASS_API_URL")?.trim()?.trimEnd('/')?.takeIf { it.isNotEmpty() }
     val password: String? = System.getenv("FIELDPASS_PASSWORD")?.takeIf { it.isNotEmpty() }
     val facultyPassword: String? = System.getenv("FIELDPASS_FACULTY_PASSWORD")?.takeIf { it.isNotEmpty() }
     val faceImage: File? = System.getenv("FIELDPASS_FACE_IMAGE")?.let(::File)?.takeIf { it.isFile }
+
+    val shortTiming: Boolean = System.getenv("FIELDPASS_SHORT_TIMING") == "1"
 
     val isConfigured: Boolean get() = apiUrl != null && password != null && facultyPassword != null && faceImage != null
 }
@@ -94,8 +98,11 @@ class FacultyHttp(private val baseUrl: String, password: String) {
         post("/api/v1/enrollments/$enrollmentId/approve", buildJsonObject { put("identity_confirmed", true) })
     }
 
-    /** Creates an activity starting [startsAt] for [studentIds] at the given venue. Returns its id. */
-    fun createActivity(name: String, lat: Double, lng: Double, startsAt: Instant, studentIds: List<String>): String {
+    /** Creates an activity from [startsAt] to [endsAt] (default two hours later) for [studentIds]. Returns its id. */
+    fun createActivity(
+        name: String, lat: Double, lng: Double, startsAt: Instant, studentIds: List<String>,
+        endsAt: Instant = startsAt.plusSeconds(2 * 3600),
+    ): String {
         val body = buildJsonObject {
             put("name", name)
             put("venue_name", "Integration Gate")
@@ -103,7 +110,7 @@ class FacultyHttp(private val baseUrl: String, password: String) {
             put("venue_lng", lng)
             put("radius_m", 100)
             put("starts_at", startsAt.toString())
-            put("ends_at", startsAt.plusSeconds(2 * 3600).toString())
+            put("ends_at", endsAt.toString())
             putJsonArray("student_ids") { studentIds.forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } }
         }
         return post("/api/v1/activities", body).getValue("id").jsonPrimitive.content

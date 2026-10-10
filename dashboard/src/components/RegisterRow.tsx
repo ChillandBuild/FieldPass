@@ -21,7 +21,7 @@ export function RegisterRow({ record, onChanged }: Props) {
   const done = (): void => { setPanel(null); onChanged() }
 
   return (
-    <li className="reg-row">
+    <li className={`reg-row reg-row-${record.status ?? 'none'}`}>
       <div className="cell cell-student">
         <h3>{student.full_name}</h3>
         <StatusBadge status={record.status} />
@@ -50,7 +50,7 @@ export function RegisterRow({ record, onChanged }: Props) {
         <FacultyObservations observations={record.observations} />
         {panel === null ? (
           <div className="btn-row">
-            <button type="button" className="btn btn-small" onClick={() => setPanel('decision')}
+            <button type="button" className="btn btn-small btn-decision" onClick={() => setPanel('decision')}
               aria-label={`Confirm or decline attendance for ${student.full_name}`}>
               Confirm or decline
             </button>

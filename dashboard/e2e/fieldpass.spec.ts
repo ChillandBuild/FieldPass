@@ -275,8 +275,12 @@ test('12. a student token on a faculty endpoint gets 403 forbidden in the error 
   expect(anon.body.error.code).toBe('not_authenticated')
 })
 
-test('screenshots: the real register at 1440 and 320 wide', async () => {
-  const shots = new URL('../screenshots/', import.meta.url).pathname
+test('screenshots: the real register at 1440 and 320 wide', async ({ browserName }, testInfo) => {
+  // Only the default browser refreshes the committed screenshots; Firefox and WebKit write to their test-results folder.
+  const shots =
+    browserName === 'chromium'
+      ? new URL('../screenshots/', import.meta.url).pathname
+      : `${testInfo.outputDir}/`
   for (const width of [1440, 320]) {
     await s.page.setViewportSize({ width, height: 900 })
     await expect(s.page.locator('li.reg-row')).toHaveCount(3)

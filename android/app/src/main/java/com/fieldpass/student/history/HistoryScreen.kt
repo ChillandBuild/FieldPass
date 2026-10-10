@@ -32,14 +32,14 @@ fun HistoryScreen(viewModel: HistoryViewModel, modifier: Modifier = Modifier) {
             else -> LazyColumn(
                 Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 item { Text(stringResource(R.string.history_title), style = MaterialTheme.typography.headlineSmall) }
                 state.error?.let { code -> item { Text(stringResource(code.messageRes), color = MaterialTheme.colorScheme.error) } }
                 if (state.records.isEmpty()) item { Text(stringResource(R.string.history_empty)) }
                 items(state.records, key = { it.activityId }) { record ->
                     SectionCard {
-                        Text(record.activityName, style = MaterialTheme.typography.titleMedium)
+                        Text(record.activityName, style = MaterialTheme.typography.titleLarge)
                         RecordSummary(record)
                     }
                 }

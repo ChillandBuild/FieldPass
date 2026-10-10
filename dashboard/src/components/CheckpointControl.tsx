@@ -24,7 +24,7 @@ export function CheckpointControl({ activity, onOpened }: Props) {
   }
 
   return (
-    <section className="card" aria-label="Checkpoint window">
+    <section className="card checkpoint-control" aria-label="Checkpoint window">
       <h2>Checkpoint window</h2>
       {activity.open_checkpoint ? (
         <p><strong>Open</strong> until {formatTime(activity.open_checkpoint.closes_at)}. Students can submit one checkpoint during this window.</p>

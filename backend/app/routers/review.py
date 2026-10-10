@@ -3,12 +3,13 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app import clock, errors
+from app import clock, errors, rules
+from app.config import Settings
 from app.db import get_session
 from app.models import Decision, Observation, RosterEntry, User, new_id
 from app.routers.activities import get_activity
 from app.schemas import AttendanceRecordOut, DecisionIn, ObservationIn, ObservationOut
-from app.security import require_faculty
+from app.security import get_settings_dep, require_faculty
 from app.views import build_record, load_activity_data
 
 router = APIRouter(tags=["review"])
@@ -29,6 +30,7 @@ def decide(
     body: DecisionIn,
     faculty: User = Depends(require_faculty),
     session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings_dep),
 ) -> AttendanceRecordOut:
     activity = get_activity(session, activity_id)
     student = _rostered_student(session, activity.id, student_id)
@@ -38,7 +40,7 @@ def decide(
     ))
     session.commit()
     data = load_activity_data(session, activity, student_id=student.id)
-    return build_record(data, student, clock.now(), with_actions=False)
+    return build_record(data, student, clock.now(), with_actions=False, timing=rules.timing_from(settings))
 
 
 @router.post("/activities/{activity_id}/observations", response_model=ObservationOut, status_code=201)

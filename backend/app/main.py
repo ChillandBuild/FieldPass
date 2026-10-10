@@ -9,7 +9,7 @@ from starlette.formparsers import MultiPartParser
 
 from app.body_limit import MAX_UPLOAD_BODY_BYTES, BodyLimitMiddleware
 from app.config import ConfigError, Settings, get_settings
-from app.db import create_all, engine_for, make_session_factory
+from app.db import create_all, make_engine_for, make_session_factory
 from app.errors import install_error_handlers
 from app.openapi_doc import install_openapi
 from app.face import FaceEngine
@@ -44,7 +44,7 @@ def create_app(
     """Build the app. Raises ConfigError right away when secrets or models are missing."""
     settings = settings or get_settings()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
-    engine = engine_for(settings)
+    engine = make_engine_for(settings)
     create_all(engine)
 
     # Interactive docs and the openapi route are off unless ENABLE_DOCS is set. app.openapi() still works

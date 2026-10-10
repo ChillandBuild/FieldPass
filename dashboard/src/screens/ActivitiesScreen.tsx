@@ -23,10 +23,10 @@ export function ActivitiesScreen() {
           <li key={a.id} className="card activity-row">
             <div>
               <h2>{a.name}</h2>
-              <p className="muted">
-                {a.venue_name} - {formatDateTime(a.starts_at)} to {formatDateTime(a.ends_at)} - {a.roster_count} students
-              </p>
-              {a.open_checkpoint ? <p><strong>Checkpoint window open</strong> until {formatDateTime(a.open_checkpoint.closes_at)}</p> : null}
+              <p className="activity-venue">{a.venue_name}</p>
+              <p className="muted activity-schedule">{formatDateTime(a.starts_at)} to {formatDateTime(a.ends_at)}</p>
+              <p className="activity-roster">{a.roster_count} students</p>
+              {a.open_checkpoint ? <p className="checkpoint-label"><strong>Checkpoint window open</strong> until {formatDateTime(a.open_checkpoint.closes_at)}</p> : null}
             </div>
             <Link className="btn" to={`/activities/${a.id}`} aria-label={`Open register for ${a.name}`}>Open register</Link>
           </li>

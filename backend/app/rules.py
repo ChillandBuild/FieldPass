@@ -1,23 +1,40 @@
 """Pure business rules: windows, action order, record status derivation."""
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Iterable, Sequence
 
 from app import errors
+from app.config import Settings
 from app.models import Activity, AttendanceEvent, CheckpointWindow, Decision
 
 ACTIONS = ("check_in", "checkpoint", "check_out")
-CHECKIN_EARLY = timedelta(minutes=15)
-CHECKOUT_LATE = timedelta(minutes=30)
 
 
-def checkin_window(activity: Activity) -> tuple[datetime, datetime]:
-    return activity.starts_at - CHECKIN_EARLY, activity.ends_at
+@dataclass(frozen=True)
+class Timing:
+    """How early check-in opens and how long check-out stays open after the activity ends."""
+    checkin_lead: timedelta = timedelta(minutes=15)
+    checkout_grace: timedelta = timedelta(minutes=30)
 
 
-def checkout_deadline(activity: Activity) -> datetime:
-    return activity.ends_at + CHECKOUT_LATE
+DEFAULT_TIMING = Timing()
+
+
+def timing_from(settings: Settings) -> Timing:
+    return Timing(
+        checkin_lead=timedelta(minutes=settings.checkin_lead_minutes),
+        checkout_grace=timedelta(minutes=settings.checkout_grace_minutes),
+    )
+
+
+def checkin_window(activity: Activity, timing: Timing = DEFAULT_TIMING) -> tuple[datetime, datetime]:
+    return activity.starts_at - timing.checkin_lead, activity.ends_at
+
+
+def checkout_deadline(activity: Activity, timing: Timing = DEFAULT_TIMING) -> datetime:
+    return activity.ends_at + timing.checkout_grace
 
 
 def open_checkpoint(windows: Iterable[CheckpointWindow], now: datetime) -> CheckpointWindow | None:
@@ -36,24 +53,25 @@ def check_action_allowed(
     events: Sequence[AttendanceEvent],
     windows: Sequence[CheckpointWindow],
     now: datetime,
+    timing: Timing = DEFAULT_TIMING,
 ) -> str | None:
     """Raise the contract error if `action` is not allowed; else return the checkpoint id (or None)."""
     if _find(events, "check_out"):
         raise errors.invalid_order("Attendance for this activity is already finished.")
     has_checkin = bool(_find(events, "check_in"))
     if action == "check_in":
-        return _check_in(activity, has_checkin, now)
+        return _check_in(activity, has_checkin, now, timing)
     if not has_checkin:
         raise errors.invalid_order("Check in first.")
     if action == "checkpoint":
         return _checkpoint(events, windows, now)
-    return _check_out(activity, now)
+    return _check_out(activity, now, timing)
 
 
-def _check_in(activity: Activity, has_checkin: bool, now: datetime) -> None:
+def _check_in(activity: Activity, has_checkin: bool, now: datetime, timing: Timing) -> None:
     if has_checkin:
         raise errors.invalid_order("You have already checked in.")
-    opens, closes = checkin_window(activity)
+    opens, closes = checkin_window(activity, timing)
     if not (opens <= now <= closes):
         raise errors.outside_window()
     return None
@@ -68,8 +86,8 @@ def _checkpoint(events: Sequence[AttendanceEvent], windows: Sequence[CheckpointW
     return window.id
 
 
-def _check_out(activity: Activity, now: datetime) -> None:
-    if now > checkout_deadline(activity):
+def _check_out(activity: Activity, now: datetime, timing: Timing) -> None:
+    if now > checkout_deadline(activity, timing):
         raise errors.outside_window()
     return None
 
@@ -79,20 +97,23 @@ def next_actions(
     events: Sequence[AttendanceEvent],
     windows: Sequence[CheckpointWindow],
     now: datetime,
+    timing: Timing = DEFAULT_TIMING,
 ) -> list[str]:
     allowed = []
     for action in ACTIONS:
         try:
-            check_action_allowed(action, activity, events, windows, now)
+            check_action_allowed(action, activity, events, windows, now, timing)
         except errors.ApiError:
             continue
         allowed.append(action)
     return allowed
 
 
-def missing_checkout(activity: Activity, events: Sequence[AttendanceEvent], now: datetime) -> bool:
+def missing_checkout(
+    activity: Activity, events: Sequence[AttendanceEvent], now: datetime, timing: Timing = DEFAULT_TIMING
+) -> bool:
     """Check-in exists, no check-out, and the check-out window has closed."""
-    return bool(_find(events, "check_in")) and not _find(events, "check_out") and now > checkout_deadline(activity)
+    return bool(_find(events, "check_in")) and not _find(events, "check_out") and now > checkout_deadline(activity, timing)
 
 
 def is_complete(events: Sequence[AttendanceEvent]) -> bool:

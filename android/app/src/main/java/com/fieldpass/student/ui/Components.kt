@@ -1,13 +1,20 @@
 package com.fieldpass.student.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -40,37 +47,51 @@ fun LoadingBox(modifier: Modifier = Modifier) {
 /** Plain-language error with an optional retry action. */
 @Composable
 fun ErrorPanel(code: ErrorCode, onRetry: (() -> Unit)?, modifier: Modifier = Modifier) {
-    Column(
-        modifier.fillMaxWidth().padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    Surface(
+        modifier = modifier.fillMaxWidth().padding(16.dp),
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        shape = MaterialTheme.shapes.medium,
     ) {
-        Text(stringResource(code.messageRes), style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
-        if (onRetry != null) {
-            Button(onClick = onRetry, modifier = Modifier.heightIn(min = MinTouchTarget)) {
-                Text(stringResource(R.string.action_retry))
+        Column(
+            Modifier.fillMaxWidth().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text(stringResource(code.messageRes), style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
+            if (onRetry != null) {
+                Button(onClick = onRetry, modifier = Modifier.heightIn(min = MinTouchTarget)) {
+                    Text(stringResource(R.string.action_retry))
+                }
             }
         }
     }
 }
 
 @Composable
-fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
-    Button(onClick = onClick, enabled = enabled, modifier = modifier.fillMaxWidth().heightIn(min = 52.dp)) { Text(text) }
+fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, showArrow: Boolean = false) {
+    Button(onClick = onClick, enabled = enabled, shape = MaterialTheme.shapes.small, modifier = modifier.fillMaxWidth().heightIn(min = 52.dp)) {
+        Text(text, textAlign = TextAlign.Center)
+        if (showArrow) {
+            Spacer(Modifier.width(8.dp))
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(20.dp))
+        }
+    }
 }
 
 @Composable
 fun SecondaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
-    OutlinedButton(onClick = onClick, enabled = enabled, modifier = modifier.fillMaxWidth().heightIn(min = 52.dp)) { Text(text) }
+    OutlinedButton(onClick = onClick, enabled = enabled, shape = MaterialTheme.shapes.small, modifier = modifier.fillMaxWidth().heightIn(min = 52.dp)) { Text(text, textAlign = TextAlign.Center) }
 }
 
 @Composable
-fun SectionCard(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+fun SectionCard(modifier: Modifier = Modifier, emphasized: Boolean = false, content: @Composable () -> Unit) {
     Card(
         modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        colors = CardDefaults.cardColors(containerColor = if (emphasized) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, if (emphasized) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f) else MaterialTheme.colorScheme.outlineVariant),
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { content() }
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
     }
 }
 
@@ -79,10 +100,11 @@ fun SectionCard(modifier: Modifier = Modifier, content: @Composable () -> Unit) 
 fun StatusChip(status: AttendanceStatus?, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
     val (container, content) = when (status) {
-        AttendanceStatus.CONFIRMED -> colors.primaryContainer to colors.onPrimaryContainer
+        AttendanceStatus.CONFIRMED -> colors.secondaryContainer to colors.onSecondaryContainer
         AttendanceStatus.NEEDS_REVIEW -> colors.tertiaryContainer to colors.onTertiaryContainer
         AttendanceStatus.NOT_CONFIRMED -> colors.errorContainer to colors.onErrorContainer
-        else -> colors.secondaryContainer to colors.onSecondaryContainer
+        AttendanceStatus.RECORDED -> colors.surfaceContainerHighest to colors.onSurface
+        null -> colors.surfaceContainer to colors.onSurfaceVariant
     }
     Surface(color = container, contentColor = content, shape = MaterialTheme.shapes.small, modifier = modifier) {
         Text(
