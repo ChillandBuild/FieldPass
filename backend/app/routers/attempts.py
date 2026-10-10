@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app import clock, devices, errors, rules
 from app.config import Settings
 from app.db import get_session
-from app.device_keys import canonical_message, verify_signature
+from app.device_keys import canonical_message, location_fingerprint, verify_signature
 from app.deps import get_face_engine, get_photo_store
 from app.face import FaceEngine
 from app.geo import regions_verdict
@@ -84,8 +84,16 @@ def _face_verdict(engine: FaceEngine, store: PhotoStore, enrollment: Enrollment,
     return engine.compare(store.decrypt(enrollment.embedding_enc), probe)
 
 
+def _integrity_reasons(is_mock: bool, rooted: bool, emulator: bool, repeated: bool) -> list[str]:
+    """Phone-reported red flags, in the fixed order the dashboard shows them."""
+    flags = (("location_mocked", is_mock), ("location_repeated", repeated),
+             ("device_rooted", rooted), ("device_emulator", emulator))
+    return [reason for reason, raised in flags if raised]
+
+
 def _build_event(
-    attempt: Attempt, activity: Activity, now: datetime, loc: tuple[str, int, int, datetime], face: str
+    attempt: Attempt, activity: Activity, now: datetime, loc: tuple[str, int, int, datetime], face: str,
+    extra_reasons: list[str], fingerprint: str | None,
 ) -> AttendanceEvent:
     loc_verdict, distance, accuracy, captured = loc
     reasons = []
@@ -93,11 +101,13 @@ def _build_event(
         reasons.append(f"location_{loc_verdict}")
     if face != "match":
         reasons.append("face_mismatch" if face == "no_match" else "face_uncertain")
+    reasons.extend(extra_reasons)
     return AttendanceEvent(
         id=new_id("evt"), attempt_id=attempt.id, activity_id=activity.id, student_id=attempt.student_id,
         action=attempt.action, status="recorded" if not reasons else "needs_review", received_at=now,
         checkpoint_id=attempt.checkpoint_id, review_reasons=",".join(reasons), location_verdict=loc_verdict,
         distance_m=distance, accuracy_m=accuracy, captured_at=captured, face_verdict=face,
+        location_fingerprint=fingerprint,
     )
 
 
@@ -176,6 +186,10 @@ def submit_attempt(
         is_mock=location_is_mock, rooted=device_rooted, emulator=device_emulator,
     )
     _require_signed(session, attempt, message, signature)
+    # Judge and store exactly what was signed: the signature covers these rounded values, not the raw form.
+    lat, lng = round(lat, 6), round(lng, 6)
+    accuracy_m = round(accuracy_m, 1)
+    captured = captured.replace(microsecond=0)
     age_seconds = (now - captured).total_seconds()
     if age_seconds > settings.location_max_age_seconds or age_seconds < -LOCATION_FUTURE_TOLERANCE_SECONDS:
         raise errors.location_stale()
@@ -201,5 +215,8 @@ def submit_attempt(
     if face == "no_match":
         # A clearly different face is refused outright: nothing is saved and the attempt stays open.
         raise errors.face_not_matched()
-    saved = _persist(session, _build_event(attempt, activity, now, loc, face), enrollment.id)
+    fingerprint = location_fingerprint(lat, lng)
+    repeated = any(e.location_fingerprint == fingerprint for e in events)
+    extra = _integrity_reasons(location_is_mock, device_rooted, device_emulator, repeated)
+    saved = _persist(session, _build_event(attempt, activity, now, loc, face, extra, fingerprint), enrollment.id)
     return event_out(saved)

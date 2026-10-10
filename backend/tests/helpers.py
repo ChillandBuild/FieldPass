@@ -38,6 +38,7 @@ class Api:
         self._tokens: dict[str, dict[str, str]] = {}
         self.keys: dict[str, tuple] = {}  # username -> (private key, public b64): one phone per student
         self.attempts: dict[str, dict] = {}  # attempt id -> create response
+        self.submits = 0
 
     def auth(self, username: str) -> dict[str, str]:
         if username not in self._tokens:
@@ -90,7 +91,8 @@ class Api:
                     turn: bytes | None = None, mock: bool = False, rooted: bool = False, emulator: bool = False,
                     signed_lat: float | None = None, key=None, signature: str | None = None):  # noqa: ANN201
         """The multipart body the phone sends. By default the turn photo shows the challenged pose."""
-        lat = VENUE[0] if lat is None else lat
+        self.submits += 1
+        lat = VENUE[0] + self.submits * 0.000001 if lat is None else lat
         lng = VENUE[1] if lng is None else lng
         captured_at = (self.clock.current - timedelta(seconds=captured_ago_s)).replace(microsecond=0)
         created = self.attempts.get(attempt_id, {"nonce": "", "challenge": "left"})

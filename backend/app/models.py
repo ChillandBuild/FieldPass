@@ -131,6 +131,8 @@ class AttendanceEvent(Base):
     accuracy_m: Mapped[int] = mapped_column(Integer)
     captured_at: Mapped[datetime] = mapped_column(UTCDateTime)
     face_verdict: Mapped[str] = mapped_column(String)
+    # Truncated SHA-256 of the coordinates; the coordinates themselves are never stored.
+    location_fingerprint: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
 class Decision(Base):
