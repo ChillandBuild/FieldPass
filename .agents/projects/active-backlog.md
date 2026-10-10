@@ -7,6 +7,12 @@
 | Document Postgres/Supabase in backend/README.md and update known-limitations #6 | medium | open |
 | Add a CI pipeline (none exists; no .github) | medium | open |
 | Playwright coverage for dashboard stale-enrollment message (limitation 15) | low | open |
+| Duty zones P1: zones, seats, coordinator, zone-aware location (plan: duty-zones-plan.md) | high | open |
+| Duty zones P2: random pings, explanations, triage, bulk confirm | high | open |
+| Duty zones P3: contract Addendum + regenerate fixtures/openapi | high | open |
+| Duty zones P4: dashboard zones form, triage summary, Confirm all | medium | open |
+| Duty zones P5: Android seats, coordinator, ping notifications, "Where are you?" | medium | open |
+| Duty zones P6: docs, known-limitations, decisions log | medium | open |
 | End-to-end run of missing-checkout and attempt-expiry on a real phone (limitation 14; e2e timing specs now exist, verify doc is current) | low | open |
 
 ## Known Tech Debt
