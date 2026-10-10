@@ -1,0 +1,21 @@
+pre-commit:
+  parallel: true
+  jobs:
+    - name: backend-syntax
+      root: backend/
+      glob: "*.py"
+      run: .venv/bin/python -m compileall -q app
+    - name: dashboard-typecheck
+      root: dashboard/
+      glob: "*.{ts,tsx}"
+      run: npm run typecheck --silent
+
+pre-push:
+  parallel: true
+  jobs:
+    - name: backend-tests
+      root: backend/
+      run: .venv/bin/python -m pytest -q
+    - name: dashboard-lint-and-tests
+      root: dashboard/
+      run: npm run typecheck --silent && npm run lint --silent && npm test --silent
