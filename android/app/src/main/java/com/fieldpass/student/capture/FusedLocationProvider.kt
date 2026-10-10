@@ -3,7 +3,9 @@ package com.fieldpass.student.capture
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.location.Location
 import android.location.LocationManager
+import android.os.Build
 import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import androidx.core.location.LocationManagerCompat
@@ -63,6 +65,7 @@ class FusedLocationProvider(private val context: Context) : LocationProvider {
             lng = location.longitude,
             accuracyM = location.accuracy.toDouble(),
             capturedAt = Instant.ofEpochSecond(Instant.now().minusMillis(ageMillis).epochSecond).toString(),
+            isMock = location.isMockReading(),
         )
     }
 
@@ -75,3 +78,7 @@ class FusedLocationProvider(private val context: Context) : LocationProvider {
         const val GRACE_MILLIS = 3_000L
     }
 }
+
+/** Android's own "this came from a fake-GPS app" marker. */
+private fun Location.isMockReading(): Boolean =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) isMock else @Suppress("DEPRECATION") isFromMockProvider

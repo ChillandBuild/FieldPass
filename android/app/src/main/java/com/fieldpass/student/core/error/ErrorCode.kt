@@ -25,6 +25,10 @@ enum class ErrorCode(val wire: String?, @StringRes val messageRes: Int) {
     MULTIPLE_FACES("multiple_faces", R.string.error_multiple_faces),
     FACE_NOT_MATCHED("face_not_matched", R.string.error_face_not_matched),
     LOCATION_STALE("location_stale", R.string.error_location_stale),
+    DEVICE_KEY_REQUIRED("device_key_required", R.string.error_device_key_required),
+    DEVICE_MISMATCH("device_mismatch", R.string.error_device_mismatch),
+    DEVICE_TAKEN("device_taken", R.string.error_device_taken),
+    BAD_SIGNATURE("bad_signature", R.string.error_bad_signature),
 
     // Client-side conditions (no wire code).
     NETWORK(null, R.string.error_network),

@@ -9,6 +9,7 @@ import com.fieldpass.student.core.model.Attempt
 import com.fieldpass.student.core.model.Enrollment
 import com.fieldpass.student.core.model.EnrollmentStatus
 import com.fieldpass.student.core.model.FaceVerdict
+import com.fieldpass.student.core.model.HeadTurn
 import com.fieldpass.student.core.model.Items
 import com.fieldpass.student.core.model.LocationVerdict
 import com.fieldpass.student.core.model.LoginRequest
@@ -156,5 +157,25 @@ class DtoSerializationTest {
         )
         assertNull(r.status)
         assertEquals(listOf(Action.CHECK_IN), r.nextActions)
+    }
+
+    @Test fun `attempt carries nonce and head-turn challenge`() {
+        val a = json.decodeFromString<Attempt>(
+            """{"id": "att_1", "activity_id": "act_1", "action": "check_in", "created_at": "2026-10-10T09:31:00Z",
+               "expires_at": "2026-10-10T09:32:30Z", "checkpoint_id": null, "nonce": "n0nce", "challenge": "right"}""",
+        )
+        assertEquals("n0nce", a.nonce)
+        assertEquals(HeadTurn.RIGHT, a.challenge)
+    }
+
+    @Test fun `new review reasons decode`() {
+        val reasons = json.decodeFromString<List<ReviewReason>>(
+            """["liveness_failed","location_mocked","location_repeated","device_rooted","device_emulator"]""",
+        )
+        assertEquals(
+            listOf(ReviewReason.LIVENESS_FAILED, ReviewReason.LOCATION_MOCKED, ReviewReason.LOCATION_REPEATED,
+                ReviewReason.DEVICE_ROOTED, ReviewReason.DEVICE_EMULATOR),
+            reasons,
+        )
     }
 }

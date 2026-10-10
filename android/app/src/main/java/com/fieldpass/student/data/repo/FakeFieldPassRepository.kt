@@ -15,9 +15,11 @@ import com.fieldpass.student.core.model.EnrollmentStatus
 import com.fieldpass.student.core.model.FaceEvidence
 import com.fieldpass.student.core.model.FaceVerdict
 import com.fieldpass.student.core.model.LocationEvidence
+import com.fieldpass.student.core.model.HeadTurn
 import com.fieldpass.student.core.model.LocationFix
 import com.fieldpass.student.core.model.LocationVerdict
 import com.fieldpass.student.core.model.ReviewReason
+import com.fieldpass.student.core.model.SubmitEvidence
 import com.fieldpass.student.core.model.Role
 import com.fieldpass.student.core.model.User
 import kotlinx.coroutines.delay
@@ -105,24 +107,26 @@ class FakeFieldPassRepository(
             id = "att_${++counter}", activityId = activityId, action = action,
             createdAt = iso(created), expiresAt = iso(created.plusSeconds(90)),
             checkpointId = activity.openCheckpoint?.id.takeIf { action == Action.CHECKPOINT },
+            nonce = "demo-nonce", challenge = if (counter % 2 == 0) HeadTurn.LEFT else HeadTurn.RIGHT,
         )
         attempts[attempt.id] = attempt
         return attempt
     }
 
-    override suspend fun submitAttempt(attemptId: String, selfie: ByteArray, fix: LocationFix): AttendanceEvent {
+    override suspend fun submitAttempt(attempt: Attempt, evidence: SubmitEvidence): AttendanceEvent {
+        val attemptId = attempt.id; val selfie = evidence.selfie; val fix = evidence.fix
         pause()
         events[attemptId]?.let { return it }
-        val attempt = attempts[attemptId] ?: throw AppError(ErrorCode.NOT_FOUND)
-        val age = Duration.between(Instant.parse(attempt.createdAt), now())
+        val stored = attempts[attemptId] ?: throw AppError(ErrorCode.NOT_FOUND)
+        val age = Duration.between(Instant.parse(stored.createdAt), now())
         if (age > Duration.ofSeconds(90)) throw AppError(ErrorCode.ATTEMPT_EXPIRED)
         if (selfie.isEmpty()) throw AppError(ErrorCode.UNUSABLE_CAPTURE)
         val inside = fix.accuracyM <= LocationFix.POOR_ACCURACY_THRESHOLD_M
         val event = AttendanceEvent(
-            id = "evt_${++counter}", attemptId = attemptId, activityId = attempt.activityId,
-            studentId = student.id, action = attempt.action,
+            id = "evt_${++counter}", attemptId = attemptId, activityId = stored.activityId,
+            studentId = student.id, action = stored.action,
             status = if (inside) AttendanceStatus.RECORDED else AttendanceStatus.NEEDS_REVIEW,
-            receivedAt = iso(now()), checkpointId = attempt.checkpointId,
+            receivedAt = iso(now()), checkpointId = stored.checkpointId,
             reviewReasons = if (inside) emptyList() else listOf(ReviewReason.LOCATION_UNCERTAIN),
             location = LocationEvidence(
                 if (inside) LocationVerdict.INSIDE else LocationVerdict.UNCERTAIN, 40.0, fix.accuracyM, fix.capturedAt,

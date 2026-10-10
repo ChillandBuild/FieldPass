@@ -13,8 +13,12 @@ import com.fieldpass.student.core.model.Enrollment
 import com.fieldpass.student.core.model.LocationFix
 import com.fieldpass.student.core.model.LoginRequest
 import com.fieldpass.student.core.model.Role
+import com.fieldpass.student.core.model.SubmitEvidence
 import com.fieldpass.student.core.model.User
 import com.fieldpass.student.data.api.ApiService
+import com.fieldpass.student.data.device.DeviceSigner
+import com.fieldpass.student.data.device.SubmitFormat
+import com.fieldpass.student.data.device.canonicalMessage
 import com.fieldpass.student.data.session.SessionManager
 import kotlinx.coroutines.CancellationException
 import okhttp3.MediaType.Companion.toMediaType
@@ -26,6 +30,7 @@ import retrofit2.HttpException
 class RealFieldPassRepository(
     private val api: ApiService,
     private val session: SessionManager,
+    private val signer: DeviceSigner,
 ) : FieldPassRepository {
 
     override suspend fun testConnection(baseUrl: String) {
@@ -33,7 +38,7 @@ class RealFieldPassRepository(
     }
 
     override suspend fun login(username: String, password: String): User {
-        val response = call { api.login(LoginRequest(username.trim(), password)) }
+        val response = call { api.login(LoginRequest(username.trim(), password, signer.publicKeyBase64())) }
         if (response.user.role != Role.STUDENT) throw AppError(ErrorCode.FACULTY_ACCOUNT)
         session.save(response.accessToken)
         return response.user
@@ -64,15 +69,25 @@ class RealFieldPassRepository(
     override suspend fun createAttempt(activityId: String, action: Action): Attempt =
         call { api.createAttempt(activityId, AttemptRequest(action)) }
 
-    override suspend fun submitAttempt(attemptId: String, selfie: ByteArray, fix: LocationFix): AttendanceEvent =
+    override suspend fun submitAttempt(attempt: Attempt, evidence: SubmitEvidence): AttendanceEvent =
         call {
+            val fix = evidence.fix
+            val flags = evidence.flags
+            val message = canonicalMessage(
+                attempt.id, attempt.nonce, evidence.selfie, evidence.turnPhoto, fix, flags.rooted, flags.emulator,
+            )
             api.submitAttempt(
-                attemptId = attemptId,
-                selfie = jpegPart("selfie", selfie),
-                lat = text(fix.lat.toString()),
-                lng = text(fix.lng.toString()),
-                accuracyM = text(fix.accuracyM.toString()),
+                attemptId = attempt.id,
+                selfie = jpegPart("selfie", evidence.selfie),
+                turnPhoto = jpegPart("turn_photo", evidence.turnPhoto),
+                lat = text(SubmitFormat.coordinate(fix.lat)),
+                lng = text(SubmitFormat.coordinate(fix.lng)),
+                accuracyM = text(SubmitFormat.accuracy(fix.accuracyM)),
                 capturedAt = text(fix.capturedAt),
+                isMock = text(fix.isMock.toString()),
+                rooted = text(flags.rooted.toString()),
+                emulator = text(flags.emulator.toString()),
+                signature = text(signer.sign(message)),
             )
         }
 

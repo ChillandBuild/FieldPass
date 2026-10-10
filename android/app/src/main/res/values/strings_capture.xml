@@ -14,4 +14,13 @@
     <string name="photo_preview_description">The photo you just took</string>
     <string name="photo_retake">Retake photo</string>
     <string name="camera_tips">Hold the phone at eye level, face the light, and keep only your face in the frame.</string>
+    <string name="liveness_step">Step %1$d of %2$d</string>
+    <string name="liveness_look_straight">Look straight at the camera and hold still.</string>
+    <string name="liveness_blink">Good. Now blink once.</string>
+    <string name="liveness_turn_left">Now slowly turn your head to your left.</string>
+    <string name="liveness_turn_right">Now slowly turn your head to your right.</string>
+    <string name="liveness_taking_photo">Hold still. Taking the photo.</string>
+    <string name="liveness_no_face">We can\'t see one face. Keep only your face in the frame.</string>
+    <string name="liveness_take_one_photo">Not working? Take one photo instead</string>
+    <string name="liveness_one_photo_note">You are sending one photo without the head turn. Your faculty will review this check-in.</string>
 </resources>

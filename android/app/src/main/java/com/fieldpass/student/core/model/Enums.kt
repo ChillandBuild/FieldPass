@@ -52,6 +52,18 @@ enum class ReviewReason {
     @SerialName("location_outside") LOCATION_OUTSIDE,
     @SerialName("face_mismatch") FACE_MISMATCH,
     @SerialName("face_uncertain") FACE_UNCERTAIN,
+    @SerialName("liveness_failed") LIVENESS_FAILED,
+    @SerialName("location_mocked") LOCATION_MOCKED,
+    @SerialName("location_repeated") LOCATION_REPEATED,
+    @SerialName("device_rooted") DEVICE_ROOTED,
+    @SerialName("device_emulator") DEVICE_EMULATOR,
+}
+
+/** Which way the server asks the student to turn their head (their own left or right). */
+@Serializable
+enum class HeadTurn {
+    @SerialName("left") LEFT,
+    @SerialName("right") RIGHT,
 }
 
 @Serializable

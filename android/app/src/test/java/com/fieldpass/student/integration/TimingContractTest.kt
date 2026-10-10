@@ -6,8 +6,10 @@ import com.fieldpass.student.core.model.Action
 import com.fieldpass.student.core.model.AttendanceRecord
 import com.fieldpass.student.core.model.AttendanceStatus
 import com.fieldpass.student.core.model.Attempt
+import com.fieldpass.student.core.model.DeviceFlags
 import com.fieldpass.student.core.model.EnrollmentStatus
 import com.fieldpass.student.core.model.LocationFix
+import com.fieldpass.student.core.model.SubmitEvidence
 import com.fieldpass.student.core.time.TimeFormat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -78,8 +80,13 @@ class TimingContractTest {
             }
         }
 
+        private var fixes = 0
+        private fun nudge(lat: Double): Double = lat + (++fixes) * 0.000001 // ~0.1 m: real GPS never repeats exactly
+        private fun evidence(photo: ByteArray, fix: LocationFix) =
+            SubmitEvidence(photo, photo, fix, DeviceFlags(rooted = false, emulator = false))
+
         private suspend fun fix(): LocationFix =
-            LocationFix(venueLat, venueLng, 15.0, Instant.ofEpochSecond(serverNow().minusSeconds(5).epochSecond).toString())
+            LocationFix(nudge(venueLat), venueLng, 15.0, Instant.ofEpochSecond(serverNow().minusSeconds(5).epochSecond).toString())
 
         private suspend fun record(activityId: String): AttendanceRecord =
             requireNotNull(student1.repo.attendanceHistory().firstOrNull { it.activityId == activityId }) { "activity missing from history" }
@@ -106,7 +113,7 @@ class TimingContractTest {
     @Test fun t03_submitAfterExpiryMapsToAttemptExpiredAndRecordsNothing() = runBlocking {
         waitUntilServerPast(requireNotNull(TimeFormat.parseUtc(expiredAttempt.expiresAt)))
         try {
-            student1.repo.submitAttempt(expiredAttempt.id, face, fix())
+            student1.repo.submitAttempt(expiredAttempt, evidence(face, fix()))
             fail("expected attempt_expired but the submit succeeded")
         } catch (e: AppError) {
             assertEquals(ErrorCode.ATTEMPT_EXPIRED, e.code)
@@ -125,7 +132,7 @@ class TimingContractTest {
     @Test fun t04_freshAttemptAfterExpirySucceeds() = runBlocking {
         val fresh = student1.repo.createAttempt(expiryActivityId, Action.CHECK_IN)
         assertTrue(fresh.id != expiredAttempt.id)
-        val event = student1.repo.submitAttempt(fresh.id, face, fix())
+        val event = student1.repo.submitAttempt(fresh, evidence(face, fix()))
         assertEquals(AttendanceStatus.RECORDED, event.status)
         assertEquals(event.id, record(expiryActivityId).checkIn?.id)
         say("t04 fresh attempt ${fresh.id} recorded ${event.id}")
@@ -138,7 +145,7 @@ class TimingContractTest {
             "Ending visit", venueLat, venueLng, now.minusSeconds(60), listOf(studentId), endsAt = endsAt,
         )
         val attempt = student1.repo.createAttempt(endingActivityId, Action.CHECK_IN)
-        val event = student1.repo.submitAttempt(attempt.id, face, fix())
+        val event = student1.repo.submitAttempt(attempt, evidence(face, fix()))
         assertEquals(AttendanceStatus.RECORDED, event.status)
 
         val before = record(endingActivityId)

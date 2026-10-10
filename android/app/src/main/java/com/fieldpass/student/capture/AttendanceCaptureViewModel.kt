@@ -7,7 +7,9 @@ import com.fieldpass.student.core.error.ErrorCode
 import com.fieldpass.student.core.error.ErrorParser
 import com.fieldpass.student.core.model.Action
 import com.fieldpass.student.core.model.Selfie
+import com.fieldpass.student.core.model.SubmitEvidence
 import com.fieldpass.student.core.time.AttemptCountdown
+import com.fieldpass.student.data.device.DeviceIntegritySource
 import com.fieldpass.student.data.repo.FieldPassRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -30,6 +32,7 @@ class AttendanceCaptureViewModel(
     private val action: Action,
     private val repository: FieldPassRepository,
     private val location: LocationProvider,
+    private val integrity: DeviceIntegritySource,
     private val elapsedRealtime: () -> Long,
     private val tickerEnabled: Boolean = true,
 ) : ViewModel() {
@@ -90,11 +93,14 @@ class AttendanceCaptureViewModel(
         _state.update { it.copy(poorAccuracyAccepted = true, phase = afterLocationPhase(it), error = null) }
     }
 
-    fun onSelfieCaptured(jpeg: ByteArray) {
+    /** Photo A (looking straight) and photo B (head turned the way the server asked), taken together. */
+    fun onPhotosCaptured(selfie: ByteArray, turnPhoto: ByteArray) {
         val current = _state.value
         if (current.phase != CapturePhase.AWAITING_SELFIE && current.phase != CapturePhase.READY_TO_SUBMIT) return
         if (current.fix == null) return
-        _state.update { it.copy(selfie = Selfie(jpeg), phase = CapturePhase.READY_TO_SUBMIT, error = null) }
+        _state.update {
+            it.copy(selfie = Selfie(selfie), turnPhoto = Selfie(turnPhoto), phase = CapturePhase.READY_TO_SUBMIT, error = null)
+        }
     }
 
     fun onCameraError(code: ErrorCode) {
@@ -104,7 +110,7 @@ class AttendanceCaptureViewModel(
     fun retakeSelfie() {
         val current = _state.value
         if (current.phase != CapturePhase.READY_TO_SUBMIT || current.pendingReplay) return
-        _state.update { it.copy(selfie = null, phase = CapturePhase.AWAITING_SELFIE) }
+        _state.update { it.copy(selfie = null, turnPhoto = null, phase = CapturePhase.AWAITING_SELFIE) }
     }
 
     /** Ignored unless ready; the phase flips to SUBMITTING synchronously so duplicate taps do nothing. */
@@ -114,14 +120,15 @@ class AttendanceCaptureViewModel(
         val attempt = current.attempt ?: return
         val fix = current.fix ?: return
         val selfie = current.selfie ?: return
+        val turnPhoto = current.turnPhoto ?: return
         _state.update { it.copy(phase = CapturePhase.SUBMITTING, error = null) }
         submitJob = viewModelScope.launch {
             try {
-                val event = repository.submitAttempt(attempt.id, selfie.bytes, fix)
+                val event = repository.submitAttempt(attempt, SubmitEvidence(selfie.bytes, turnPhoto.bytes, fix, integrity.flags()))
                 clearSelfie()
                 stopTicker()
                 _state.update {
-                    it.copy(phase = CapturePhase.DONE, result = event, selfie = null, pendingReplay = false, error = null)
+                    it.copy(phase = CapturePhase.DONE, result = event, selfie = null, turnPhoto = null, pendingReplay = false, error = null)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -148,7 +155,7 @@ class AttendanceCaptureViewModel(
     fun discard() {
         cancelJobs()
         clearSelfie()
-        _state.update { it.copy(selfie = null) }
+        _state.update { it.copy(selfie = null, turnPhoto = null) }
     }
 
     override fun onCleared() {
@@ -187,7 +194,7 @@ class AttendanceCaptureViewModel(
                 e.code == ErrorCode.FACE_NOT_MATCHED -> {
                 clearSelfie()
                 _state.update {
-                    it.copy(phase = CapturePhase.AWAITING_SELFIE, selfie = null, pendingReplay = false, error = e.code)
+                    it.copy(phase = CapturePhase.AWAITING_SELFIE, selfie = null, turnPhoto = null, pendingReplay = false, error = e.code)
                 }
             }
             e.code == ErrorCode.LOCATION_STALE -> {
@@ -203,14 +210,14 @@ class AttendanceCaptureViewModel(
         stopTicker()
         clearSelfie()
         _state.update {
-            it.copy(phase = CapturePhase.EXPIRED, selfie = null, remainingMillis = 0, pendingReplay = false, error = null)
+            it.copy(phase = CapturePhase.EXPIRED, selfie = null, turnPhoto = null, remainingMillis = 0, pendingReplay = false, error = null)
         }
     }
 
     private fun fail(code: ErrorCode) {
         stopTicker()
         clearSelfie()
-        _state.update { it.copy(phase = CapturePhase.ATTEMPT_FAILED, selfie = null, error = code) }
+        _state.update { it.copy(phase = CapturePhase.ATTEMPT_FAILED, selfie = null, turnPhoto = null, error = code) }
     }
 
     private fun startTicker() {
@@ -238,6 +245,7 @@ class AttendanceCaptureViewModel(
     /** Best-effort wipe of the in-memory JPEG; the reference is also dropped from state. */
     private fun clearSelfie() {
         _state.value.selfie?.bytes?.fill(0)
+        _state.value.turnPhoto?.bytes?.fill(0)
     }
 
     private companion object {

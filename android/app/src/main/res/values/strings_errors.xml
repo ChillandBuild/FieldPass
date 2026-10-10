@@ -17,6 +17,10 @@
     <string name="error_face_not_matched">This is not the same person as the enrolled photo. Nothing was recorded.</string>
     <string name="error_multiple_faces">More than one face was in the photo. Make sure only you are in the frame, then retake it.</string>
     <string name="error_location_stale">Your location reading was too old. We are getting a fresh one.</string>
+    <string name="error_device_key_required">This version of the app is too old to sign in. Install the latest FieldPass app.</string>
+    <string name="error_device_mismatch">Your account is linked to a different phone. Ask your faculty to reset your phone on the dashboard, then sign in again.</string>
+    <string name="error_device_taken">This phone is already linked to another student. Each student must use their own phone.</string>
+    <string name="error_bad_signature">This phone could not prove the check-in came from it. Sign out, sign in again, and try once more.</string>
     <string name="error_network">Cannot reach FieldPass. Check your Wi-Fi or hotspot, then try again.</string>
     <string name="error_timeout">The server took too long to answer. Your request may or may not have arrived. Try again.</string>
     <string name="error_server">The server had a problem. Please try again in a moment.</string>
