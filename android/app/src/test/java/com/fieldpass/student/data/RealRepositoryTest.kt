@@ -1,6 +1,7 @@
 package com.fieldpass.student.data
 
 import com.fieldpass.student.FakeSettings
+import com.fieldpass.student.SoftwareDeviceSigner
 import com.fieldpass.student.core.error.AppError
 import com.fieldpass.student.core.error.ErrorCode
 import com.fieldpass.student.core.model.Action
@@ -26,6 +27,7 @@ class RealRepositoryTest {
     private lateinit var server: MockWebServer
     private lateinit var session: SessionManager
     private lateinit var repo: RealFieldPassRepository
+    private val signer = SoftwareDeviceSigner()
 
     private val studentJson = """{"id":"u_s1","username":"student1","full_name":"Asha Verma","role":"student"}"""
 
@@ -33,7 +35,7 @@ class RealRepositoryTest {
         server = MockWebServer().also { it.start() }
         val settings = FakeSettings("http://${server.hostName}:${server.port}")
         session = SessionManager(MemoryTokenStore())
-        repo = RealFieldPassRepository(ApiClient.create(settings, session), session)
+        repo = RealFieldPassRepository(ApiClient.create(settings, session), session, signer)
     }
 
     @After fun tearDown() { server.shutdown() }
@@ -48,6 +50,7 @@ class RealRepositoryTest {
         val login = server.takeRequest()
         assertEquals("/api/v1/auth/login", login.path)
         assertNull(login.getHeader("Authorization"))
+        assertTrue(login.body.readUtf8().contains("\"device_public_key\":\"${signer.publicKeyBase64()}\""))
 
         session.clear()
         server.enqueue(json("""{"access_token":"tok2","user":{"id":"u_f","username":"faculty1","full_name":"Dr","role":"faculty"}}"""))

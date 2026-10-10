@@ -15,6 +15,7 @@ import com.fieldpass.student.core.model.LoginRequest
 import com.fieldpass.student.core.model.Role
 import com.fieldpass.student.core.model.User
 import com.fieldpass.student.data.api.ApiService
+import com.fieldpass.student.data.device.DeviceSigner
 import com.fieldpass.student.data.session.SessionManager
 import kotlinx.coroutines.CancellationException
 import okhttp3.MediaType.Companion.toMediaType
@@ -26,6 +27,7 @@ import retrofit2.HttpException
 class RealFieldPassRepository(
     private val api: ApiService,
     private val session: SessionManager,
+    private val signer: DeviceSigner,
 ) : FieldPassRepository {
 
     override suspend fun testConnection(baseUrl: String) {
@@ -33,7 +35,7 @@ class RealFieldPassRepository(
     }
 
     override suspend fun login(username: String, password: String): User {
-        val response = call { api.login(LoginRequest(username.trim(), password)) }
+        val response = call { api.login(LoginRequest(username.trim(), password, signer.publicKeyBase64())) }
         if (response.user.role != Role.STUDENT) throw AppError(ErrorCode.FACULTY_ACCOUNT)
         session.save(response.accessToken)
         return response.user

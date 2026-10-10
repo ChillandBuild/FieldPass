@@ -4,6 +4,7 @@ import android.content.Context
 import com.fieldpass.student.capture.FusedLocationProvider
 import com.fieldpass.student.capture.LocationProvider
 import com.fieldpass.student.data.api.ApiClient
+import com.fieldpass.student.data.device.KeystoreDeviceSigner
 import com.fieldpass.student.data.repo.FakeFieldPassRepository
 import com.fieldpass.student.data.repo.FieldPassRepository
 import com.fieldpass.student.data.repo.RealFieldPassRepository
@@ -21,7 +22,7 @@ class AppContainer(context: Context) {
     val session = SessionManager(KeystoreTokenStore(appContext))
     val repository: FieldPassRepository = SwitchableRepository(
         settings = settings,
-        real = RealFieldPassRepository(ApiClient.create(settings, session), session),
+        real = RealFieldPassRepository(ApiClient.create(settings, session), session, KeystoreDeviceSigner()),
         fake = FakeFieldPassRepository(),
     )
     val location: LocationProvider = FusedLocationProvider(appContext)

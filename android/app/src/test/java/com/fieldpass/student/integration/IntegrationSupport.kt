@@ -1,6 +1,7 @@
 package com.fieldpass.student.integration
 
 import com.fieldpass.student.FakeSettings
+import com.fieldpass.student.SoftwareDeviceSigner
 import com.fieldpass.student.data.api.ApiClient
 import com.fieldpass.student.data.api.ApiService
 import com.fieldpass.student.data.repo.RealFieldPassRepository
@@ -49,10 +50,16 @@ object IntegrationEnv {
 }
 
 /** One student device: the app's production API service, repository and session wired to the server. */
-class StudentStack(baseUrl: String) {
+/** One software "phone" per username, so a second stack for the same student is the same phone. */
+object TestPhones {
+    private val phones = mutableMapOf<String, SoftwareDeviceSigner>()
+    fun of(username: String): SoftwareDeviceSigner = synchronized(phones) { phones.getOrPut(username) { SoftwareDeviceSigner() } }
+}
+
+class StudentStack(baseUrl: String, username: String = "student1") {
     val session = SessionManager(MemoryTokenStore())
     val api: ApiService = ApiClient.create(FakeSettings(baseUrl), session)
-    val repo = RealFieldPassRepository(api, session)
+    val repo = RealFieldPassRepository(api, session, TestPhones.of(username))
 }
 
 /** Plain HTTP faculty client. The app has no faculty features, so this deliberately bypasses app code. */

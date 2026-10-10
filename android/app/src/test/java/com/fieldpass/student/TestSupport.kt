@@ -11,7 +11,13 @@ import com.fieldpass.student.core.model.Attempt
 import com.fieldpass.student.core.model.Enrollment
 import com.fieldpass.student.core.model.LocationFix
 import com.fieldpass.student.core.model.User
+import com.fieldpass.student.data.device.DeviceSigner
 import com.fieldpass.student.data.repo.FieldPassRepository
+import java.security.KeyPairGenerator
+import java.security.PublicKey
+import java.security.Signature
+import java.security.spec.ECGenParameterSpec
+import java.util.Base64
 
 /** Repository whose every method fails unless a test overrides it. */
 open class StubRepository : FieldPassRepository {
@@ -56,6 +62,17 @@ fun event(attemptId: String = "att_1", status: AttendanceStatus = AttendanceStat
     id = "evt_1", attemptId = attemptId, activityId = "act_1", studentId = "u_s1",
     action = Action.CHECK_IN, status = status, receivedAt = "2026-10-10T09:31:12Z",
 )
+
+/** JVM stand-in for the Keystore signer: same key type, same signature format. */
+class SoftwareDeviceSigner : DeviceSigner {
+    private val pair = KeyPairGenerator.getInstance("EC").apply { initialize(ECGenParameterSpec("secp256r1")) }.generateKeyPair()
+    val publicKey: PublicKey get() = pair.public
+    override fun publicKeyBase64(): String = Base64.getEncoder().encodeToString(pair.public.encoded)
+    override fun sign(message: ByteArray): String {
+        val signature = Signature.getInstance("SHA256withECDSA").apply { initSign(pair.private); update(message) }
+        return Base64.getEncoder().encodeToString(signature.sign())
+    }
+}
 
 class FakeSettings(base: String = "http://192.168.43.10:8000") : com.fieldpass.student.data.settings.AppSettings {
     private val _base = kotlinx.coroutines.flow.MutableStateFlow(base)

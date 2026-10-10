@@ -12,7 +12,11 @@ data class User(
 )
 
 @Serializable
-data class LoginRequest(val username: String, val password: String)
+data class LoginRequest(
+    val username: String,
+    val password: String,
+    @SerialName("device_public_key") val devicePublicKey: String? = null,
+)
 
 @Serializable
 data class LoginResponse(

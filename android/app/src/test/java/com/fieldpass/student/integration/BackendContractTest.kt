@@ -235,7 +235,7 @@ class BackendContractTest {
     }
 
     @Test fun s15_unapprovedStudentSeesCheckInThenEnrollmentNotApproved() = runBlocking {
-        val s3 = StudentStack(base)
+        val s3 = StudentStack(base, "student3")
         s3.repo.login("student3", password)
         assertEquals(EnrollmentStatus.NONE, s3.repo.enrollment().status)
         val a = requireNotNull(s3.repo.activities().firstOrNull { it.id == activityId })
@@ -282,7 +282,7 @@ class BackendContractTest {
 
     @Test fun s19_notFoundAndNotAssigned() = runBlocking {
         expectError(ErrorCode.NOT_FOUND) { student1.repo.activity("act_missing") }
-        val s2 = StudentStack(base)
+        val s2 = StudentStack(base, "student2")
         s2.repo.login("student2", password)
         val e = expectError(ErrorCode.NOT_ASSIGNED) { s2.repo.createAttempt(activityId, Action.CHECK_IN) }
         assertEquals(403, e.httpStatus)
@@ -290,7 +290,7 @@ class BackendContractTest {
     }
 
     @Test fun s20_facultyAccountIsTurnedAway() = runBlocking {
-        val s = StudentStack(base)
+        val s = StudentStack(base, "faculty1")
         expectError(ErrorCode.FACULTY_ACCOUNT) { s.repo.login("faculty1", facultyPassword) }
         assertNull(s.session.token())
         say("s20 faculty login through the app -> FACULTY_ACCOUNT, no token kept")
