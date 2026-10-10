@@ -88,12 +88,16 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ## Server address
 
-The laptop's hotspot address changes, so there are two ways to set it.
+The student login intentionally contains only username and password. Configure the server when
+building; the value is baked into `BuildConfig.DEFAULT_API_BASE_URL`:
 
-- Build time default (baked into `BuildConfig.DEFAULT_API_BASE_URL`): edit `fieldpassApiBaseUrl` in
-  `gradle.properties`, or build with `./gradlew assembleDebug -PfieldpassApiBaseUrl=http://192.168.43.10:8000`.
-- At runtime: on the login screen edit "Server address" and tap "Test connection". It calls
-  `GET /api/v1/health` and the address is saved on the phone. No rebuild needed.
+```bash
+./gradlew assembleDebug -PfieldpassApiBaseUrl=http://192.168.43.10:8000
+```
+
+You can also set `fieldpassApiBaseUrl` in `gradle.properties`. Rebuild and reinstall the app when the
+laptop's hotspot address changes. Always pass the real HTTPS deployment URL for release builds; the
+LAN default is for local development only.
 
 Plain `http://` works in debug builds only (debug network security config). The release build
 forbids cleartext traffic, so a release build needs an `https://` server.
@@ -103,11 +107,10 @@ Demo accounts come from the backend seed (`student1`, `student2`, `student3`; pa
 
 ## Fixture mode (no server)
 
-Debug builds only. Turn on "Fixture mode" on the login screen (or build with
-`-PfieldpassFixtureMode=true` to make it the default). An in-memory fake replaces the server so
-every screen can be tried with sample data: any non-empty password works, usernames starting with
-`faculty` show the faculty message. A red "FIXTURE MODE: sample data" banner stays visible on every
-screen. Release builds cannot enable it.
+Debug builds only. Build with `-PfieldpassFixtureMode=true` to use an in-memory fake instead of the
+server. Every screen can then be tried with sample data: any non-empty password works, and usernames
+starting with `faculty` show the faculty message. A red "FIXTURE MODE: sample data" banner stays
+visible on every screen. Release builds cannot enable fixture mode.
 
 ## Behaviour summary
 

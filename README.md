@@ -163,14 +163,14 @@ npm run dev                  # http://localhost:5173
 ```
 
 To use another port, add it after `--`: `npm run dev -- --port 5174`. Then open `http://localhost:5174`, and add
-`http://localhost:5174` to `CORS_ORIGINS` in `backend/.env` (see section 8 of the runbook), or the login screen
+`http://localhost:5174` to `CORS_ORIGINS` in `backend/.env` (see section 8 of the runbook), or sign-in
 will say it cannot reach the server.
 
 Open http://localhost:5173, sign in as `faculty1`. In `.env.local`, `VITE_USE_FIXTURES` must be `false`
-(or the line removed) to use the real backend. `.env.example` already says `false`. On the login screen, type
-the backend address in "Server address" (for a one-laptop run, `http://localhost:8000`) and press "Test
-connection". The field starts filled with the example address `http://192.168.43.10:8000`, which is almost
-certainly wrong for you, so always replace it. A good result reads "Connected. Server time ...".
+(or the line removed) to use the real backend. `.env.example` already says `false`. Set
+`VITE_API_BASE_URL=http://localhost:8000` in `.env.local` for a one-laptop run, then sign in with the
+username and password fields. When deploying the dashboard, set `VITE_API_BASE_URL` to the public backend
+HTTPS origin in Vercel's project environment before building.
 
 ### 3. Android app
 

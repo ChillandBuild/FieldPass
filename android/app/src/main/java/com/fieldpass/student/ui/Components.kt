@@ -27,7 +27,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.fieldpass.student.R
@@ -35,6 +38,26 @@ import com.fieldpass.student.core.error.ErrorCode
 import com.fieldpass.student.core.model.AttendanceStatus
 
 val MinTouchTarget = 48.dp
+
+/** Compact FieldPass mark used where the full product name is shown beside it. */
+@Composable
+fun BrandMark(modifier: Modifier = Modifier, size: androidx.compose.ui.unit.Dp = 40.dp) {
+    Surface(
+        modifier = modifier.size(size).clearAndSetSemantics { },
+        color = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+        shape = MaterialTheme.shapes.small,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                "f",
+                style = MaterialTheme.typography.headlineSmall,
+                fontFamily = FontFamily.Serif,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
 
 @Composable
 fun LoadingBox(modifier: Modifier = Modifier) {

@@ -3,8 +3,6 @@ package com.fieldpass.student.ui.home
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.DateRange
@@ -14,7 +12,6 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -30,7 +27,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -45,6 +41,7 @@ import com.fieldpass.student.enrollment.EnrollmentScreen
 import com.fieldpass.student.enrollment.EnrollmentViewModel
 import com.fieldpass.student.history.HistoryScreen
 import com.fieldpass.student.history.HistoryViewModel
+import com.fieldpass.student.ui.BrandMark
 
 private enum class Tab(val labelRes: Int, val icon: ImageVector) {
     ACTIVITIES(R.string.tab_activities, Icons.Filled.DateRange),
@@ -80,13 +77,12 @@ fun HomeScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Surface(color = MaterialTheme.colorScheme.primary, shape = MaterialTheme.shapes.small, modifier = Modifier.size(36.dp).clearAndSetSemantics { }) {
-                            Box(contentAlignment = Alignment.Center) { Text("F /", style = MaterialTheme.typography.titleMedium) }
-                        }
+                        BrandMark(size = 36.dp)
                         Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge)
                     }
                 },

@@ -85,7 +85,7 @@ test.beforeAll(async ({ browser }) => {
   const students = await api.get<{ items: { id: string; username: string }[] }>('/students', s.faculty)
   for (const u of students.body.items) s.ids[u.username] = u.id
 
-  // The dashboard is built for the default backend; the saved "Server address" points this browser at the short one.
+  // The development dashboard uses a saved test address to point this browser at the short backend.
   const context = await browser.newContext()
   await context.addInitScript(
     (saved: { key: string; url: string }) => { window.localStorage.setItem(saved.key, saved.url) },

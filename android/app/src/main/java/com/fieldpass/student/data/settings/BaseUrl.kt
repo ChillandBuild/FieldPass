@@ -2,7 +2,7 @@ package com.fieldpass.student.data.settings
 
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
-/** Normalises what a person types into the server-address field. */
+/** Normalises a configured server address before it is used by the API client. */
 object BaseUrl {
     /**
      * Returns "scheme://host[:port]" with no trailing slash or path, or null if not usable.

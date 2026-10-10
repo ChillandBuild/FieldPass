@@ -10,7 +10,7 @@ export function AppShell() {
       <a className="skip-link" href="#main-content">Skip to content</a>
       <header className="app-header">
         <div className="brand">
-          <span className="brand-mark" aria-hidden="true">F<span> /</span></span>
+          <span className="brand-mark" aria-hidden="true">f</span>
           <span>FieldPass<span className="brand-role">Faculty</span></span>
         </div>
         <nav className="app-nav" aria-label="Main">

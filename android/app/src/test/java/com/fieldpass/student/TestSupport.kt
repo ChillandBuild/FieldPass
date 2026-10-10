@@ -62,6 +62,4 @@ class FakeSettings(base: String = "http://192.168.43.10:8000") : com.fieldpass.s
     private val _fixture = kotlinx.coroutines.flow.MutableStateFlow(false)
     override val baseUrl: kotlinx.coroutines.flow.StateFlow<String> = _base
     override val fixtureMode: kotlinx.coroutines.flow.StateFlow<Boolean> = _fixture
-    override fun setBaseUrl(normalized: String) { _base.value = normalized }
-    override fun setFixtureMode(enabled: Boolean) { _fixture.value = enabled }
 }

@@ -1,10 +1,32 @@
+import java.net.URI
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
 }
 
-val apiBaseUrl: String = (project.findProperty("fieldpassApiBaseUrl") as String?) ?: "http://192.168.43.10:8000"
+val configuredApiBaseUrl = project.findProperty("fieldpassApiBaseUrl") as String?
+val verifyReleaseApiBaseUrl = tasks.register("verifyReleaseApiBaseUrl") {
+    doLast {
+        require(!configuredApiBaseUrl.isNullOrBlank()) {
+            "Release builds require -PfieldpassApiBaseUrl=https://your-deployment.example"
+        }
+        val validHttpsUrl = runCatching {
+            val uri = URI(configuredApiBaseUrl.trim())
+            uri.scheme.equals("https", ignoreCase = true) && !uri.host.isNullOrBlank()
+        }.getOrDefault(false)
+        require(validHttpsUrl) {
+            "Release builds require a valid HTTPS fieldpassApiBaseUrl with a host"
+        }
+    }
+}
+tasks.configureEach {
+    if (name.contains("Release", ignoreCase = true) && name != verifyReleaseApiBaseUrl.name) {
+        dependsOn(verifyReleaseApiBaseUrl)
+    }
+}
+val apiBaseUrl: String = configuredApiBaseUrl ?: "http://192.168.43.10:8000"
 val fixtureDefault: String = (project.findProperty("fieldpassFixtureMode") as String?) ?: "false"
 
 android {

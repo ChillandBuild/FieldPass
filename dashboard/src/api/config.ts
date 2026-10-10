@@ -18,13 +18,16 @@ export function isValidBaseUrl(raw: string): boolean {
 }
 
 export function getBaseUrl(): string {
+  const fromEnv = import.meta.env.VITE_API_BASE_URL
+  // A deployed dashboard must use its configured API, even if this browser has an old local test address.
+  // Without one, use its own origin so a hosting rewrite can serve /api/v1.
+  if (import.meta.env.PROD) return normalizeBaseUrl(fromEnv || window.location.origin)
   try {
     const saved = localStorage.getItem(BASE_URL_KEY)
     if (saved && isValidBaseUrl(saved)) return normalizeBaseUrl(saved)
   } catch {
     // storage unavailable: fall through to the env default
   }
-  const fromEnv = import.meta.env.VITE_API_BASE_URL
   return normalizeBaseUrl(fromEnv && fromEnv.length > 0 ? fromEnv : DEFAULT_BASE_URL)
 }
 

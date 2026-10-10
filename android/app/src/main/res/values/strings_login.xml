@@ -1,21 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="login_title">Sign in to FieldPass</string>
-    <string name="login_subtitle">Student app for field activity attendance.</string>
+    <string name="login_title">Welcome back</string>
+    <string name="login_subtitle">Sign in with your student credentials.</string>
     <string name="login_username">Username</string>
     <string name="login_password">Password</string>
     <string name="login_sign_in">Sign in</string>
     <string name="login_signing_in">Signing in</string>
-    <string name="login_server_heading">Server address</string>
-    <string name="login_server_hint">http://192.168.43.10:8000</string>
-    <string name="login_server_help">Ask your faculty member for the address shown on the server laptop. It changes when the hotspot changes.</string>
-    <string name="login_test_connection">Test connection</string>
-    <string name="login_testing">Testing</string>
-    <string name="login_connection_ok">Connected. The server is reachable.</string>
-    <string name="login_fixture_switch">Fixture mode (sample data, no server)</string>
-    <string name="login_fixture_help">Debug builds only. Uses made-up data so every screen can be tried without a server. Any password works; usernames starting with faculty show the faculty message.</string>
-    <string name="login_limits">A selfie taken with the camera does not prove who is holding the phone, and phone location can be inaccurate or altered. Faculty reviews uncertain results.</string>
     <string name="login_session_expired">Your session has ended. Please sign in again.</string>
     <string name="session_unreachable_title">Cannot check your session</string>
-    <string name="session_unreachable_sign_out">Sign out and change server</string>
+    <string name="session_unreachable_sign_out">Return to sign in</string>
 </resources>

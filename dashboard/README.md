@@ -39,7 +39,7 @@ Override `VITE_VENUE_SEARCH_URL`, `VITE_VENUE_TILE_URL`, and `VITE_VENUE_TILE_AT
 
 | Variable | Meaning |
 |---|---|
-| `VITE_API_BASE_URL` | Backend base URL with no trailing slash, e.g. `http://192.168.43.10:8000`. The app adds `/api/v1`. |
+| `VITE_API_BASE_URL` | Backend origin with no trailing slash, e.g. `http://localhost:8000` locally or the public HTTPS API origin for deployment. The app adds `/api/v1`. |
 | `VITE_USE_FIXTURES` | `true` switches to in-memory sample data. Anything else (default) uses the real API. |
 
 Vite reads these when the dev server starts, so restart `npm run dev` after editing `.env.local`.
@@ -50,22 +50,26 @@ Vite reads these when the dev server starts, so restart `npm run dev` after edit
 - **Fixture mode** (`VITE_USE_FIXTURES=true`) uses `src/api/fixtureClient.ts`: two activities, pending enrollments,
   and a register covering recorded, needs review, confirmed, not confirmed, a missing checkout, an outdated
   decision, and in-person observations. Changes you make last until you reload the page. A yellow banner
-  reading "FIXTURE MODE: sample data, not the real server" is shown on every screen, including login.
+  reading "FIXTURE MODE: sample data · changes reset on reload" is shown on every screen, including login.
   Sign in as `faculty1` with any password. `student1` shows the "this dashboard is for faculty" message.
 
 ```bash
 VITE_USE_FIXTURES=true npm run dev
 ```
 
-## Pointing at the backend on a LAN or hotspot
+## Connecting to the backend
 
-The laptop's address changes when the hotspot changes, so you do not need to rebuild:
+Set `VITE_API_BASE_URL` in `.env.local` for local development. For a phone or another laptop on the same
+network, use the backend's LAN address and restart Vite after changing the value. The login page shows only
+username and password; it does not ask faculty to configure a server.
 
-1. Start the backend so it listens on all interfaces (for example `--host 0.0.0.0`).
-2. On the login screen, type the full address in "Server address", for example `http://192.168.43.10:8000`.
-3. Press "Test connection". It calls `GET /api/v1/health` and shows the server time on success.
+For a Vercel build, configure `VITE_API_BASE_URL` as the public HTTPS origin of the deployed backend and
+`VITE_USE_FIXTURES=false`. Vite embeds these values when it builds the frontend, so redeploy after changing
+them. If the API is available through a same-origin `/api/v1` rewrite, `VITE_API_BASE_URL` may be omitted.
+The existing backend handles authentication; its `DATABASE_URL` can point to Supabase Postgres.
 
-The address is saved in the browser's localStorage. If nothing is saved, `VITE_API_BASE_URL` is used.
+The browser may still use a saved local API address during development for the second-backend timing test.
+Production builds ignore that saved address.
 
 The backend must allow cross-origin requests from the dashboard's origin (for example `http://localhost:5173`),
 including the `Authorization` header and the `Content-Disposition` response header for CSV downloads
@@ -149,7 +153,8 @@ and 5173 must be free. The last test also writes `screenshots/real-register-1440
 `e2e/timing.spec.ts` runs after the main spec and starts its OWN real backend on 127.0.0.1:8001 (override with
 `E2E_SHORT_BACKEND_PORT`; keep it free) with `ATTEMPT_TTL_SECONDS=4` and `CHECKOUT_GRACE_MINUTES=0` on throwaway data.
 The main spec's backend (default settings) stays untouched. Nothing is faked: the tests wait in real time, polling the
-server's own clock, and the dashboard in that spec is pointed at port 8001 through the saved "Server address". It proves:
+server's own clock, and the development dashboard in that spec is pointed at port 8001 through a test-only
+localStorage override. It proves:
 
 - Attempt expiry: a selfie and location submitted after the attempt lifetime get `410 attempt_expired` in the error
   envelope, the register keeps showing no arrival, and a fresh attempt is then shown as Recorded.

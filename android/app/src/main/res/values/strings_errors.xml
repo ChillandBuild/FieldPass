@@ -17,10 +17,10 @@
     <string name="error_face_not_matched">This is not the same person as the enrolled photo. Nothing was recorded.</string>
     <string name="error_multiple_faces">More than one face was in the photo. Make sure only you are in the frame, then retake it.</string>
     <string name="error_location_stale">Your location reading was too old. We are getting a fresh one.</string>
-    <string name="error_network">Cannot reach the server. Check your Wi-Fi or hotspot and the server address, then try again.</string>
+    <string name="error_network">Cannot reach FieldPass. Check your Wi-Fi or hotspot, then try again.</string>
     <string name="error_timeout">The server took too long to answer. Your request may or may not have arrived. Try again.</string>
     <string name="error_server">The server had a problem. Please try again in a moment.</string>
-    <string name="error_invalid_base_url">That server address does not look right. Use a form like http://192.168.43.10:8000</string>
+    <string name="error_invalid_base_url">This build is not connected to a valid FieldPass server. Ask the organizer for an updated app.</string>
     <string name="error_faculty_account">This is a faculty account. Please use the faculty dashboard in a web browser. This app is for students.</string>
     <string name="error_location_permission">Location permission is off. FieldPass reads your location only while you check in, answer a checkpoint or check out.</string>
     <string name="error_location_off">Location services are turned off on this phone. Turn them on, then try again.</string>

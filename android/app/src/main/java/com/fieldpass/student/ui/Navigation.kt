@@ -54,7 +54,7 @@ fun AppNavigation(
 ) {
     NavHost(navController, startDestination = if (signedIn) Routes.HOME else Routes.LOGIN, modifier = modifier) {
         composable(Routes.LOGIN) {
-            val vm: LoginViewModel = viewModel(factory = remember { viewModelFactory { initializer { LoginViewModel(container.repository, container.settings) } } })
+            val vm: LoginViewModel = viewModel(factory = remember { viewModelFactory { initializer { LoginViewModel(container.repository) } } })
             LoginScreen(vm, sessionExpired, onSignedIn)
         }
         composable(Routes.HOME) { entry ->

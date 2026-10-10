@@ -1,6 +1,5 @@
 package com.fieldpass.student.auth
 
-import com.fieldpass.student.FakeSettings
 import com.fieldpass.student.StubRepository
 import com.fieldpass.student.core.error.AppError
 import com.fieldpass.student.core.error.ErrorCode
@@ -21,21 +20,16 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class LoginViewModelTest {
-    private val settings = FakeSettings()
-
     @Before fun setUp() { Dispatchers.setMain(UnconfinedTestDispatcher()) }
     @After fun tearDown() { Dispatchers.resetMain() }
 
     private class Repo(val onLogin: suspend () -> User = { User("u_s1", "student1", "Asha", Role.STUDENT) }) : StubRepository() {
         var logins = 0
-        var tested: String? = null
-        var testFailure: AppError? = null
         override suspend fun login(username: String, password: String): User { logins++; return onLogin() }
-        override suspend fun testConnection(baseUrl: String) { tested = baseUrl; testFailure?.let { throw it } }
     }
 
     @Test fun facultyAccountGetsClearMessage() {
-        val vm = LoginViewModel(Repo({ throw AppError(ErrorCode.FACULTY_ACCOUNT) }), settings)
+        val vm = LoginViewModel(Repo({ throw AppError(ErrorCode.FACULTY_ACCOUNT) }))
         vm.onUsername("faculty1"); vm.onPassword("x")
         vm.signIn()
         assertEquals(ErrorCode.FACULTY_ACCOUNT, vm.state.value.error)
@@ -43,7 +37,7 @@ class LoginViewModelTest {
     }
 
     @Test fun successfulLoginSignalsAndClearsPassword() {
-        val vm = LoginViewModel(Repo(), settings)
+        val vm = LoginViewModel(Repo())
         vm.onUsername("student1"); vm.onPassword("pw")
         vm.signIn()
         assertTrue(vm.state.value.signedIn)
@@ -53,7 +47,7 @@ class LoginViewModelTest {
     @Test fun duplicateTapsSendOneLoginRequest() {
         val gate = CompletableDeferred<Unit>()
         val repo = Repo({ gate.await(); User("u", "s", "A", Role.STUDENT) })
-        val vm = LoginViewModel(repo, settings)
+        val vm = LoginViewModel(repo)
         vm.onUsername("student1"); vm.onPassword("pw")
         vm.signIn(); vm.signIn()
         assertEquals(1, repo.logins)
@@ -63,29 +57,8 @@ class LoginViewModelTest {
 
     @Test fun signInNeedsUsernameAndPassword() {
         val repo = Repo()
-        val vm = LoginViewModel(repo, settings)
+        val vm = LoginViewModel(repo)
         vm.signIn()
         assertEquals(0, repo.logins)
-    }
-
-    @Test fun testConnectionNormalisesPersistsAndReportsOk() {
-        val repo = Repo()
-        val vm = LoginViewModel(repo, settings)
-        vm.onBaseUrl("10.0.0.5:8000/")
-        vm.testConnection()
-        assertEquals("http://10.0.0.5:8000", repo.tested)
-        assertEquals("http://10.0.0.5:8000", settings.baseUrl.value)
-        assertEquals(ConnectionResult.Ok, vm.state.value.connection)
-    }
-
-    @Test fun testConnectionReportsUnreachableAndBadAddress() {
-        val repo = Repo().apply { testFailure = AppError(ErrorCode.NETWORK) }
-        val vm = LoginViewModel(repo, settings)
-        vm.onBaseUrl("10.0.0.5:8000")
-        vm.testConnection()
-        assertEquals(ConnectionResult.Failed(ErrorCode.NETWORK), vm.state.value.connection)
-        vm.onBaseUrl("not a url ::")
-        vm.testConnection()
-        assertEquals(ConnectionResult.Failed(ErrorCode.INVALID_BASE_URL), vm.state.value.connection)
     }
 }

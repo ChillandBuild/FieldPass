@@ -11,13 +11,13 @@ import com.fieldpass.student.data.repo.SwitchableRepository
 import com.fieldpass.student.data.session.KeystoreTokenStore
 import com.fieldpass.student.data.session.SessionManager
 import com.fieldpass.student.data.settings.AppSettings
-import com.fieldpass.student.data.settings.SharedPrefsAppSettings
+import com.fieldpass.student.data.settings.BuildConfigAppSettings
 
 /** Manual dependency injection: one place that wires the app's long-lived objects. */
 class AppContainer(context: Context) {
     private val appContext = context.applicationContext
 
-    val settings: AppSettings = SharedPrefsAppSettings(appContext)
+    val settings: AppSettings = BuildConfigAppSettings()
     val session = SessionManager(KeystoreTokenStore(appContext))
     val repository: FieldPassRepository = SwitchableRepository(
         settings = settings,
