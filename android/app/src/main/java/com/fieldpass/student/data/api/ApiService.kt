@@ -57,9 +57,14 @@ interface ApiService {
     suspend fun submitAttempt(
         @Path("id") attemptId: String,
         @Part selfie: MultipartBody.Part,
+        @Part turnPhoto: MultipartBody.Part,
         @Part("lat") lat: RequestBody,
         @Part("lng") lng: RequestBody,
         @Part("accuracy_m") accuracyM: RequestBody,
         @Part("location_captured_at") capturedAt: RequestBody,
+        @Part("location_is_mock") isMock: RequestBody,
+        @Part("device_rooted") rooted: RequestBody,
+        @Part("device_emulator") emulator: RequestBody,
+        @Part("signature") signature: RequestBody,
     ): AttendanceEvent
 }

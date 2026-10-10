@@ -85,7 +85,8 @@ private fun SelfieStep(state: CaptureUiState, vm: AttendanceCaptureViewModel) {
     state.error?.let { ErrorText(it) }
     Text(stringResource(R.string.camera_tips), style = MaterialTheme.typography.bodySmall)
     PermissionGate(GatedPermission.CAMERA) {
-        CameraCapture(onCaptured = vm::onSelfieCaptured, onCaptureFailed = vm::onCameraError)
+        // Interim until the guided camera: the one photo is sent as both parts (server adds liveness_failed).
+        CameraCapture(onCaptured = { vm.onPhotosCaptured(it, it) }, onCaptureFailed = vm::onCameraError)
     }
 }
 

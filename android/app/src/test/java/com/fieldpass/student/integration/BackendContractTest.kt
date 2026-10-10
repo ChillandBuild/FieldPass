@@ -9,11 +9,13 @@ import com.fieldpass.student.core.model.Activity
 import com.fieldpass.student.core.model.AttendanceEvent
 import com.fieldpass.student.core.model.AttendanceStatus
 import com.fieldpass.student.core.model.Attempt
+import com.fieldpass.student.core.model.DeviceFlags
 import com.fieldpass.student.core.model.EnrollmentStatus
 import com.fieldpass.student.core.model.FaceVerdict
 import com.fieldpass.student.core.model.LocationFix
 import com.fieldpass.student.core.model.LocationVerdict
 import com.fieldpass.student.core.model.Role
+import com.fieldpass.student.core.model.SubmitEvidence
 import com.fieldpass.student.core.time.AttemptCountdown
 import com.fieldpass.student.core.time.TimeFormat
 import kotlinx.coroutines.runBlocking
@@ -74,7 +76,12 @@ class BackendContractTest {
 
         private fun serverNow(): Instant = Instant.now().plus(skew)
 
-        private fun fix(ageSeconds: Long = 5, lat: Double = venueLat, lng: Double = venueLng, accuracy: Double = 15.0) =
+        private var fixes = 0
+        private fun nudge(lat: Double): Double = lat + (++fixes) * 0.000001 // ~0.1 m: real GPS never repeats exactly
+        private fun evidence(photo: ByteArray, fix: LocationFix) =
+            SubmitEvidence(photo, photo, fix, DeviceFlags(rooted = false, emulator = false))
+
+        private fun fix(ageSeconds: Long = 5, lat: Double = nudge(venueLat), lng: Double = venueLng, accuracy: Double = 15.0) =
             LocationFix(lat, lng, accuracy, Instant.ofEpochSecond(serverNow().minusSeconds(ageSeconds).epochSecond).toString())
 
         private suspend fun expectError(code: ErrorCode, block: suspend () -> Any?): AppError {
@@ -174,7 +181,7 @@ class BackendContractTest {
     }
 
     @Test fun s09_blankSelfieIsUnusableAndAttemptStaysOpen() = runBlocking {
-        val e = expectError(ErrorCode.UNUSABLE_CAPTURE) { student1.repo.submitAttempt(attempt.id, blank, fix()) }
+        val e = expectError(ErrorCode.UNUSABLE_CAPTURE) { student1.repo.submitAttempt(attempt, evidence(blank, fix())) }
         assertEquals(422, e.httpStatus)
         say("s09 blank image -> unusable_capture (422); retried on the same attempt in later steps")
     }
@@ -183,13 +190,13 @@ class BackendContractTest {
         // lat 1.0E-5 is how Kotlin prints small doubles; location_stale (not validation_error) proves it parsed.
         val stale = fix(ageSeconds = 120, lat = 0.00001)
         assertEquals("1.0E-5", stale.lat.toString())
-        val e = expectError(ErrorCode.LOCATION_STALE) { student1.repo.submitAttempt(attempt.id, face, stale) }
+        val e = expectError(ErrorCode.LOCATION_STALE) { student1.repo.submitAttempt(attempt, evidence(face, stale)) }
         assertEquals(422, e.httpStatus)
         say("s10 120 s old location_captured_at -> location_stale (422); '1.0E-5' lat accepted by server")
     }
 
     @Test fun s11_submitSuccess() = runBlocking {
-        event = student1.repo.submitAttempt(attempt.id, face, fix())
+        event = student1.repo.submitAttempt(attempt, evidence(face, fix()))
         assertEquals(attempt.id, event.attemptId)
         assertEquals(activityId, event.activityId)
         assertEquals(Action.CHECK_IN, event.action)
@@ -206,9 +213,9 @@ class BackendContractTest {
     }
 
     @Test fun s12_replayReturnsSameEvent() = runBlocking {
-        val again = student1.repo.submitAttempt(attempt.id, face, fix())
+        val again = student1.repo.submitAttempt(attempt, evidence(face, fix()))
         assertEquals(event.id, again.id)
-        val withDifferentBody = student1.repo.submitAttempt(attempt.id, blank, fix(ageSeconds = 120))
+        val withDifferentBody = student1.repo.submitAttempt(attempt, evidence(blank, fix(ageSeconds = 120)))
         assertEquals(event.id, withDifferentBody.id)
         say("s12 replay returned the same event id ${again.id} (also with a different body)")
     }
@@ -270,7 +277,7 @@ class BackendContractTest {
         val text = "abc".toRequestBody("text/plain".toMediaType())
         val selfie = MultipartBody.Part.createFormData("selfie", "selfie.jpg", face.toRequestBody("image/jpeg".toMediaType()))
         try {
-            student1.api.submitAttempt("att_does_not_matter", selfie, text, text, text, text)
+            student1.api.submitAttempt("att_does_not_matter", selfie, selfie, text, text, text, text, text, text, text, text)
             fail("expected 422")
         } catch (e: HttpException) {
             val parsed = ErrorParser.fromHttp(e.code(), e.response()?.errorBody()?.string())

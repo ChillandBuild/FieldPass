@@ -5,6 +5,7 @@ import com.fieldpass.student.core.model.Activity
 import com.fieldpass.student.core.model.AttendanceEvent
 import com.fieldpass.student.core.model.AttendanceRecord
 import com.fieldpass.student.core.model.Attempt
+import com.fieldpass.student.core.model.SubmitEvidence
 import com.fieldpass.student.core.model.Enrollment
 import com.fieldpass.student.core.model.LocationFix
 import com.fieldpass.student.core.model.User
@@ -29,5 +30,5 @@ interface FieldPassRepository {
     suspend fun attendanceHistory(): List<AttendanceRecord>
 
     suspend fun createAttempt(activityId: String, action: Action): Attempt
-    suspend fun submitAttempt(attemptId: String, selfie: ByteArray, fix: LocationFix): AttendanceEvent
+    suspend fun submitAttempt(attempt: Attempt, evidence: SubmitEvidence): AttendanceEvent
 }

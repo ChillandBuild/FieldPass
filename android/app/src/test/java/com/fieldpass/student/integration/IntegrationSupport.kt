@@ -37,6 +37,8 @@ import javax.imageio.ImageIO
  * FIELDPASS_FACE_IMAGE path to a JPEG with exactly one clear face (OpenCV's lena.jpg works)
  * FIELDPASS_SHORT_TIMING  set to 1 ONLY when that backend runs with ATTEMPT_TTL_SECONDS=4 and
  *                      CHECKOUT_GRACE_MINUTES=0 (enables TimingContractTest; BackendContractTest needs the defaults)
+ * Start the backend with the head-turn rule opened wide (no turned-head sample photo exists):
+ *                      LIVENESS_FRONT_MAX_OFFSET=9 LIVENESS_TURN_MIN_OFFSET=-9 in its environment.
  */
 object IntegrationEnv {
     val apiUrl: String? = System.getenv("FIELDPASS_API_URL")?.trim()?.trimEnd('/')?.takeIf { it.isNotEmpty() }

@@ -3,6 +3,7 @@
 # Usage: android/scripts/integration-test.sh [port]   (default 8001)
 # Two runs, each on a fresh backend: default settings (BackendContractTest), then ATTEMPT_TTL_SECONDS=4 and
 # CHECKOUT_GRACE_MINUTES=0 (TimingContractTest). Exits non-zero if either fails.
+# Head-turn limits opened wide: the sample face has no turned-head photo.
 # Uses a temp database and photo dir, the real OpenCV face engine, and deletes everything on exit.
 # Never prints secrets: SEED_PASSWORD (students) and FACULTY_SEED_PASSWORD (faculty1) are read from
 # backend/.env (or the environment) and passed on via env.
@@ -80,13 +81,13 @@ run_tests() {
 # Run 1: default settings (90 s attempts, 15/30 minute windows): the 20 contract steps.
 echo "[integration] run 1: default backend settings"
 RESULT=0
-start_backend default
+start_backend default LIVENESS_FRONT_MAX_OFFSET=9 LIVENESS_TURN_MIN_OFFSET=-9
 run_tests BackendContractTest || RESULT=1
 stop_backend
 
 # Run 2: short settings so attempt expiry and a missing check-out happen after a few real seconds.
 echo "[integration] run 2: ATTEMPT_TTL_SECONDS=4, CHECKOUT_GRACE_MINUTES=0"
-start_backend short ATTEMPT_TTL_SECONDS=4 CHECKOUT_GRACE_MINUTES=0
+start_backend short ATTEMPT_TTL_SECONDS=4 CHECKOUT_GRACE_MINUTES=0 LIVENESS_FRONT_MAX_OFFSET=9 LIVENESS_TURN_MIN_OFFSET=-9
 run_tests TimingContractTest FIELDPASS_SHORT_TIMING=1 || RESULT=1
 stop_backend
 

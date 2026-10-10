@@ -1,7 +1,8 @@
 package com.fieldpass.student.data.repo
 
 import com.fieldpass.student.core.model.Action
-import com.fieldpass.student.core.model.LocationFix
+import com.fieldpass.student.core.model.Attempt
+import com.fieldpass.student.core.model.SubmitEvidence
 import com.fieldpass.student.data.settings.AppSettings
 
 /** Delegates to the fake repository when fixture mode is on, otherwise to the real one. */
@@ -22,6 +23,5 @@ class SwitchableRepository(
     override suspend fun activity(id: String) = active.activity(id)
     override suspend fun attendanceHistory() = active.attendanceHistory()
     override suspend fun createAttempt(activityId: String, action: Action) = active.createAttempt(activityId, action)
-    override suspend fun submitAttempt(attemptId: String, selfie: ByteArray, fix: LocationFix) =
-        active.submitAttempt(attemptId, selfie, fix)
+    override suspend fun submitAttempt(attempt: Attempt, evidence: SubmitEvidence) = active.submitAttempt(attempt, evidence)
 }

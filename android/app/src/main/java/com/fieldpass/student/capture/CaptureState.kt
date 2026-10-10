@@ -30,6 +30,7 @@ data class CaptureUiState(
     val remainingMillis: Long? = null,
     val fix: LocationFix? = null,
     val selfie: Selfie? = null,
+    val turnPhoto: Selfie? = null,
     val error: ErrorCode? = null,
     val pendingReplay: Boolean = false,
     val poorAccuracyAccepted: Boolean = false,

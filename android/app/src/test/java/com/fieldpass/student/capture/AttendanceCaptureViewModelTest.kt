@@ -9,7 +9,9 @@ import com.fieldpass.student.core.model.Action
 import com.fieldpass.student.core.model.AttendanceEvent
 import com.fieldpass.student.core.model.AttendanceStatus
 import com.fieldpass.student.core.model.Attempt
+import com.fieldpass.student.core.model.DeviceFlags
 import com.fieldpass.student.core.model.LocationFix
+import com.fieldpass.student.core.model.SubmitEvidence
 import com.fieldpass.student.event
 import com.fieldpass.student.fix
 import kotlinx.coroutines.CompletableDeferred
@@ -19,6 +21,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -38,8 +41,12 @@ class AttendanceCaptureViewModelTest {
         override suspend fun createAttempt(activityId: String, action: Action): Attempt =
             attempt("att_${++createCalls}")
 
-        override suspend fun submitAttempt(attemptId: String, selfie: ByteArray, fix: LocationFix): AttendanceEvent {
-            submittedAttemptIds += attemptId
+        val submitted = mutableListOf<SubmitEvidence>()
+
+        override suspend fun submitAttempt(attempt: Attempt, evidence: SubmitEvidence): AttendanceEvent {
+            // Copies: the ViewModel wipes the real arrays right after a successful submit.
+            submitted += SubmitEvidence(evidence.selfie.copyOf(), evidence.turnPhoto.copyOf(), evidence.fix, evidence.flags)
+            submittedAttemptIds += attempt.id
             gate?.await()
             return when (val step = submitScript.removeFirst()) {
                 is AttendanceEvent -> step
@@ -57,11 +64,34 @@ class AttendanceCaptureViewModelTest {
 
     private fun vm(location: LocationProvider) = AttendanceCaptureViewModel(
         activityId = "act_1", action = Action.CHECK_IN, repository = repo, location = location,
+        integrity = { DeviceFlags(rooted = true, emulator = false) },
         elapsedRealtime = { clock }, tickerEnabled = false,
     )
 
     private fun AttendanceCaptureViewModel.toReady() {
-        start(); onSelfieCaptured(byteArrayOf(1, 2, 3))
+        start(); onPhotosCaptured(byteArrayOf(1, 2, 3), byteArrayOf(1, 2, 3))
+    }
+
+    @Test fun `submit carries both photos, the fix and the phone flags`() {
+        repo.submitScript = ArrayDeque(listOf(event()))
+        val vm = vm(ScriptedLocation(fix()))
+        vm.start()
+        vm.onPhotosCaptured(byteArrayOf(1), byteArrayOf(2))
+        vm.submit()
+        val evidence = repo.submitted.single()
+        assertArrayEquals(byteArrayOf(1), evidence.selfie)
+        assertArrayEquals(byteArrayOf(2), evidence.turnPhoto)
+        assertEquals(DeviceFlags(rooted = true, emulator = false), evidence.flags)
+        assertNull(vm.state.value.turnPhoto)
+    }
+
+    @Test fun `retake drops both photos`() {
+        val vm = vm(ScriptedLocation(fix()))
+        vm.start()
+        vm.onPhotosCaptured(byteArrayOf(1), byteArrayOf(2))
+        vm.retakeSelfie()
+        assertNull(vm.state.value.selfie)
+        assertNull(vm.state.value.turnPhoto)
     }
 
     @Test fun happyPath_showsServerDecision() {
@@ -70,7 +100,7 @@ class AttendanceCaptureViewModelTest {
         vm.start()
         assertEquals(CapturePhase.AWAITING_SELFIE, vm.state.value.phase)
         assertEquals(90_000L, vm.state.value.remainingMillis)
-        vm.onSelfieCaptured(byteArrayOf(1, 2, 3))
+        vm.onPhotosCaptured(byteArrayOf(1, 2, 3), byteArrayOf(1, 2, 3))
         assertEquals(CapturePhase.READY_TO_SUBMIT, vm.state.value.phase)
         vm.submit()
         val s = vm.state.value
@@ -172,10 +202,10 @@ class AttendanceCaptureViewModelTest {
         assertEquals(CapturePhase.AWAITING_SELFIE, vm.state.value.phase)
         assertEquals(ErrorCode.UNUSABLE_CAPTURE, vm.state.value.error)
         assertNull(vm.state.value.selfie)
-        vm.onSelfieCaptured(byteArrayOf(9))
+        vm.onPhotosCaptured(byteArrayOf(9), byteArrayOf(9))
         vm.submit()
         assertEquals(ErrorCode.MULTIPLE_FACES, vm.state.value.error)
-        vm.onSelfieCaptured(byteArrayOf(9))
+        vm.onPhotosCaptured(byteArrayOf(9), byteArrayOf(9))
         vm.submit()
         assertEquals(CapturePhase.DONE, vm.state.value.phase)
         assertEquals(1, repo.createCalls)
@@ -202,7 +232,7 @@ class AttendanceCaptureViewModelTest {
     @Test fun selfieIgnoredBeforeLocationFix() {
         val vm = vm(ScriptedLocation(fix(250.0)))
         vm.start()
-        vm.onSelfieCaptured(byteArrayOf(1))
+        vm.onPhotosCaptured(byteArrayOf(1), byteArrayOf(1))
         assertEquals(CapturePhase.POOR_ACCURACY, vm.state.value.phase)
         assertNull(vm.state.value.selfie)
     }
@@ -222,7 +252,7 @@ class AttendanceCaptureViewModelTest {
             override suspend fun createAttempt(activityId: String, action: Action): Attempt =
                 throw AppError(ErrorCode.ENROLLMENT_NOT_APPROVED)
         }
-        val vm = AttendanceCaptureViewModel("act_1", Action.CHECK_IN, failing, ScriptedLocation(), { 0L }, false)
+        val vm = AttendanceCaptureViewModel("act_1", Action.CHECK_IN, failing, ScriptedLocation(), { DeviceFlags(false, false) }, { 0L }, false)
         vm.start()
         assertEquals(CapturePhase.ATTEMPT_FAILED, vm.state.value.phase)
         assertEquals(ErrorCode.ENROLLMENT_NOT_APPROVED, vm.state.value.error)
