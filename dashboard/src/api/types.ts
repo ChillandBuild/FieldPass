@@ -40,6 +40,7 @@ export interface CheckpointWindow {
 }
 
 export interface Activity {
+  venue_regions?: VenueRegion[]
   id: string
   name: string
   venue_name: string
@@ -133,12 +134,15 @@ export interface HealthResponse {
   server_time: string
 }
 
+export interface VenueRegion { venue_lat: number; venue_lng: number; radius_m: number }
+
 export interface CreateActivityInput {
   name: string
   venue_name: string
   venue_lat: number
   venue_lng: number
   radius_m: number
+  venue_regions?: VenueRegion[]
   starts_at: string
   ends_at: string
   student_ids: string[]

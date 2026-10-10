@@ -124,7 +124,7 @@ export const fixtureApi: Api = {
     const roster = STUDENTS.filter((s) => input.student_ids.includes(s.id))
     const activity: Activity = {
       id: nextId('act'), name: input.name, venue_name: input.venue_name, venue_lat: input.venue_lat,
-      venue_lng: input.venue_lng, radius_m: input.radius_m, starts_at: input.starts_at, ends_at: input.ends_at,
+      venue_lng: input.venue_lng, radius_m: input.radius_m, venue_regions: input.venue_regions, starts_at: input.starts_at, ends_at: input.ends_at,
       created_by: FACULTY.full_name, roster_count: roster.length, checkpoint_windows: [], open_checkpoint: null,
     }
     store = { ...store, activities: [activity, ...store.activities], rows: { ...store.rows, [activity.id]: roster.map((s) => emptyRecord(activity, s)) } }

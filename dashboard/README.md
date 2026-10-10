@@ -20,6 +20,23 @@ To use another port, run `npm run dev -- --port 5174` and add that origin (for e
 
 ## Environment variables
 
+Activity creation uses React Leaflet for venue selection. Search for a venue/address, choose a result,
+drag the circle or its centre pin over the attendance area, choose its radius, and confirm it. Both move together. The map opens at building level
+and defaults to a 25 m radius, with a continuous size slider. Moving or resizing the circle requires confirmation again;
+its centre coordinates and radius are sent to the existing API automatically. Circles don't select floors.
+Device location is an optional shortcut when you are physically at the venue.
+The map is visible immediately; click or double-tap it to place a location without searching.
+Use **+ Add location** to add another circle, then place it on the map. Select a location's tab to
+adjust its own size slider or remove it. Each circle and centre pin move together, preserving zoom.
+Confirm after every added location is placed. All circles are saved, and attendance may count inside any one.
+
+Search defaults to the Photon public demo API (explicit searches only, with a small in-memory cache).
+It permits reasonable request volumes but offers no availability guarantee; use your own Photon instance
+for larger deployments: https://github.com/komoot/photon. Search queries are sent to that provider.
+Map tiles use OpenStreetMap with visible attribution and normal browser caching, per
+https://operations.osmfoundation.org/policies/tiles/. Search and tiles need an internet connection.
+Override `VITE_VENUE_SEARCH_URL`, `VITE_VENUE_TILE_URL`, and `VITE_VENUE_TILE_ATTRIBUTION` for other providers.
+
 | Variable | Meaning |
 |---|---|
 | `VITE_API_BASE_URL` | Backend base URL with no trailing slash, e.g. `http://192.168.43.10:8000`. The app adds `/api/v1`. |

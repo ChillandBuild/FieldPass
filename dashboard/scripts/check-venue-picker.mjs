@@ -1,0 +1,133 @@
+// Regression check against the running local dashboard/API. No activity is saved.
+import { chromium, expect } from '@playwright/test'
+import { readFileSync, mkdirSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+const base = process.env.DASHBOARD_URL || 'http://127.0.0.1:5173'
+const api = process.env.API_URL || 'http://127.0.0.1:8010'
+const env = Object.fromEntries(readFileSync(new URL('../../backend/.env', import.meta.url), 'utf8').split(/\r?\n/)
+  .filter((line) => line && !line.startsWith('#')).map((line) => { const i = line.indexOf('='); return [line.slice(0, i), line.slice(i + 1)] }))
+const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH })
+try {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 950 } })
+  const login = await context.request.post(`${api}/api/v1/auth/login`, { data: { username: 'faculty1', password: env.FACULTY_SEED_PASSWORD } })
+  expect(login.ok()).toBeTruthy()
+  const { access_token: token } = await login.json()
+  await context.addInitScript(({ api, token }) => {
+    localStorage.setItem('fieldpass.apiBaseUrl', api)
+    sessionStorage.setItem('fieldpass.token', token)
+  }, { api, token })
+  const page = await context.newPage()
+  const errors = []
+  page.on('pageerror', (error) => errors.push(error.stack || error.message))
+  // Search is deterministic; normal browser tile loading remains enabled.
+  await page.route('https://photon.komoot.io/api/**', (route) => route.fulfill({ json: { features: [{
+    geometry: { coordinates: [76.9003, 10.9027] }, properties: { name: 'Academic Block 1', city: 'Coimbatore' },
+  }] } }))
+  await page.goto(`${base}/activities/new`)
+  await expect(page.getByRole('heading', { name: 'New activity' })).toBeVisible()
+  await expect(page.getByLabel('Venue latitude')).toHaveCount(0)
+  await expect(page.locator('.leaflet-container')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Confirm venue location' })).toBeDisabled()
+  await page.locator('.leaflet-container').click({ position: { x: 250, y: 170 } })
+  await expect(page.locator('.venue-draggable-area')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Confirm venue location' })).toBeEnabled()
+  await page.getByLabel('Search venue or address').fill('Amrita Academic Block 1 Coimbatore')
+  await page.getByRole('button', { name: 'Search venue', exact: true }).click()
+  await page.getByRole('button', { name: /Academic Block 1.*Coimbatore/ }).click()
+  const circle = page.locator('.venue-draggable-area')
+  await expect(circle).toBeVisible()
+  await expect(page.locator('.leaflet-marker-icon')).toHaveCount(1)
+  await expect(page.getByRole('slider', { name: 'Drag to resize attendance area' })).toHaveValue('25')
+  await page.getByRole('button', { name: 'Confirm venue location' }).click()
+  await expect(page.getByText('Venue location confirmed', { exact: true })).toBeVisible()
+  await page.locator('.leaflet-container').scrollIntoViewIfNeeded()
+  const before = await circle.boundingBox()
+  if (!before) throw new Error('No circle bounds')
+  const x = before.x + before.width * 0.75
+  const y = before.y + before.height / 2
+  await page.mouse.move(x, y)
+  await page.mouse.down()
+  await page.mouse.move(x + 50, y + 25, { steps: 8 })
+  await page.mouse.up()
+  await expect(page.getByRole('button', { name: 'Confirm venue location' })).toBeEnabled()
+  const after = await circle.boundingBox()
+  expect(after.x - before.x).toBeGreaterThan(35)
+  expect(after.y - before.y).toBeGreaterThan(15)
+  // Regression: zooming out must survive pin dragging and double-tap placement.
+  for (let i = 0; i < 3; i++) {
+    const width = (await circle.boundingBox()).width
+    await page.getByRole('button', { name: 'Zoom out' }).click()
+    await expect.poll(async () => (await circle.boundingBox()).width).toBeLessThan(width * 0.75)
+    await page.waitForTimeout(400) // Let Leaflet finish its zoom transition before the next click.
+  }
+  const pin = page.locator('.leaflet-marker-icon')
+  const pinBefore = await pin.boundingBox()
+  const circleBeforePinDrag = await circle.boundingBox()
+  await page.mouse.move(pinBefore.x + pinBefore.width / 2, pinBefore.y + 12)
+  await page.mouse.down()
+  await page.mouse.move(pinBefore.x + pinBefore.width / 2 - 40, pinBefore.y + 12 + 20, { steps: 8 })
+  await page.mouse.up()
+  const circleAfterPinDrag = await circle.boundingBox()
+  expect(circleBeforePinDrag.x - circleAfterPinDrag.x).toBeGreaterThan(25)
+  expect(circleAfterPinDrag.width / circleBeforePinDrag.width).toBeGreaterThan(0.8)
+  expect(circleAfterPinDrag.width / circleBeforePinDrag.width).toBeLessThan(1.2)
+  await page.locator('.leaflet-container').dblclick({ position: { x: 250, y: 230 } })
+  await expect.poll(async () => (await circle.boundingBox()).width / circleAfterPinDrag.width).toBeLessThan(1.2)
+  const placed = await circle.boundingBox()
+  const mapBounds = await page.locator('.leaflet-container').boundingBox()
+  expect(placed.x + placed.width / 2 - mapBounds.x).toBeCloseTo(250, -1)
+  const slider = page.getByRole('slider', { name: 'Drag to resize attendance area' })
+  await slider.scrollIntoViewIfNeeded()
+  const sliderBounds = await slider.boundingBox()
+  await page.mouse.move(sliderBounds.x + 10, sliderBounds.y + sliderBounds.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(sliderBounds.x + sliderBounds.width / 3, sliderBounds.y + sliderBounds.height / 2, { steps: 8 })
+  await page.mouse.up()
+  expect(await slider.getAttribute('min')).toBe('0')
+  expect(await slider.getAttribute('max')).toBe('300')
+  expect(Number(await slider.inputValue())).toBeGreaterThan(50)
+  expect(await page.getByRole('button', { name: /Move circle (north|south|west|east)/ }).count()).toBe(0)
+  await page.getByRole('slider', { name: 'Drag to resize attendance area' }).fill('10')
+  await expect(page.getByRole('slider', { name: 'Drag to resize attendance area' })).toHaveValue('10')
+  await page.getByRole('button', { name: 'Focus on selected area' }).click()
+  await page.getByRole('button', { name: 'Confirm venue location' }).click()
+  await page.getByRole('button', { name: '+ Add location', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Confirm venue location' })).toBeDisabled()
+  await page.locator('.leaflet-container').dblclick({ position: { x: 350, y: 220 } })
+  await expect(page.locator('.leaflet-marker-icon')).toHaveCount(2)
+  await expect(page.locator('.venue-draggable-area')).toHaveCount(2)
+  await slider.fill('80')
+  await page.getByRole('button', { name: 'Location 1', exact: true }).click()
+  await expect(slider).toHaveValue('10')
+  await page.getByRole('button', { name: 'Location 2', exact: true }).click()
+  await expect(slider).toHaveValue('80')
+  await page.getByRole('button', { name: '+ Add location', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Confirm venue location' })).toBeDisabled()
+  await page.getByRole('button', { name: 'Remove selected location' }).click()
+  await expect(page.locator('.leaflet-marker-icon')).toHaveCount(2)
+  await page.getByRole('button', { name: 'Confirm venue location' }).click()
+  mkdirSync(new URL('../screenshots/', import.meta.url), { recursive: true })
+  await page.screenshot({ path: fileURLToPath(new URL('../screenshots/venue-circle-desktop.png', import.meta.url)), fullPage: true })
+  for (const width of [320, 768]) {
+    await page.setViewportSize({ width, height: 950 })
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)
+    expect(overflow).toBeFalsy()
+  }
+  await page.screenshot({ path: fileURLToPath(new URL('../screenshots/venue-circle-mobile.png', import.meta.url)), fullPage: true })
+  let saved
+  await page.route(`${api}/api/v1/activities`, async (route) => {
+    if (route.request().method() !== 'POST') return route.continue()
+    saved = route.request().postDataJSON()
+    await route.fulfill({ status: 201, json: { ...saved, id: 'act_map_test', roster_count: 1, created_by: 'Dr. Meera Rao',
+      checkpoint_windows: [], open_checkpoint: null, my_attendance: null } })
+  })
+  await page.getByLabel('Activity name').fill('Multiple location check')
+  await page.getByLabel('Asha Verma (student1)').check()
+  await page.getByRole('button', { name: 'Create activity' }).click()
+  await expect(page.getByRole('heading', { name: 'Activity created' })).toBeVisible()
+  expect(saved.venue_regions).toHaveLength(2)
+  expect(saved.venue_regions.map((region) => region.radius_m)).toEqual([10, 80])
+  await expect(page.getByRole('region', { name: 'Venue boundary' })).toContainText('Location 2')
+  expect(errors).toEqual([])
+  console.log('PASS: direct selection, circle/pin dragging, preserved zoom after dragging and double-tap, continuous radius slider, responsive layout; no activity saved.')
+} finally { await browser.close() }

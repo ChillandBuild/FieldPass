@@ -4,7 +4,7 @@ interface Props {
   onLocation: (lat: number, lng: number) => void
 }
 
-/** Fills coordinates from this device's location. Fails gracefully; coordinates can always be typed. */
+/** Optional shortcut when faculty are physically at the venue. */
 export function UseLocationButton({ onLocation }: Props) {
   const [message, setMessage] = useState<string | null>(null)
   const [isBusy, setIsBusy] = useState(false)
@@ -12,7 +12,7 @@ export function UseLocationButton({ onLocation }: Props) {
 
   function request(): void {
     if (!supported) {
-      setMessage('This browser cannot provide a location. Type the coordinates instead.')
+      setMessage('This browser cannot provide a location. Search for the venue instead.')
       return
     }
     setIsBusy(true)
@@ -21,13 +21,13 @@ export function UseLocationButton({ onLocation }: Props) {
       (pos) => {
         setIsBusy(false)
         onLocation(Number(pos.coords.latitude.toFixed(6)), Number(pos.coords.longitude.toFixed(6)))
-        setMessage(`Filled from this device (accuracy about ${Math.round(pos.coords.accuracy)} m). Check it is the venue.`)
+        setMessage(`Device location accuracy is about ${Math.round(pos.coords.accuracy)} m. Position the circle and confirm the venue location.`)
       },
       (err) => {
         setIsBusy(false)
         setMessage(err.code === err.PERMISSION_DENIED
-          ? 'Location permission was denied. Type the coordinates instead.'
-          : 'Could not get this device\'s location. Type the coordinates instead.')
+          ? 'Location permission was denied. Search for the venue instead.'
+          : 'Could not get this device\'s location. Search for the venue instead.')
       },
       { enableHighAccuracy: true, timeout: 15_000, maximumAge: 0 },
     )

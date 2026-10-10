@@ -21,6 +21,7 @@ dist/
 *.tsbuildinfo
 
 # android
+.tools/
 android/.gradle/
 android/build/
 android/app/build/

@@ -140,7 +140,10 @@ def build_activity(data: ActivityData, now: datetime, my_attendance: AttendanceR
     live = rules.open_checkpoint(data.windows, now)
     return ActivityOut(
         id=activity.id, name=activity.name, venue_name=activity.venue_name, venue_lat=activity.venue_lat,
-        venue_lng=activity.venue_lng, radius_m=activity.radius_m, starts_at=to_iso(activity.starts_at),
+        venue_lng=activity.venue_lng, radius_m=activity.radius_m,
+        venue_regions=[dict(venue_lat=r.venue_lat, venue_lng=r.venue_lng, radius_m=r.radius_m) for r in activity.venue_regions]
+        or [dict(venue_lat=activity.venue_lat, venue_lng=activity.venue_lng, radius_m=activity.radius_m)],
+        starts_at=to_iso(activity.starts_at),
         ends_at=to_iso(activity.ends_at), created_by=creator.full_name if creator else "",
         roster_count=len(data.roster),
         checkpoint_windows=[window_out(w, data.users) for w in data.windows],

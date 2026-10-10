@@ -2,7 +2,7 @@ import { localInputToUtcIso } from './time'
 import type { CreateActivityInput } from '../api/types'
 
 export const DEFAULT_RADIUS_M = 100
-export const MIN_RADIUS_M = 10
+export const MIN_RADIUS_M = 0
 export const MAX_RADIUS_M = 5000
 export const MIN_CHECKPOINT_MINUTES = 1
 export const MAX_CHECKPOINT_MINUTES = 60

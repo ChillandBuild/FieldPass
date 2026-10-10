@@ -22,3 +22,10 @@ def location_verdict(distance_m: float, accuracy_m: float, radius_m: float) -> s
     if distance_m - accuracy_m > radius_m:
         return "outside"
     return "uncertain"
+
+
+def regions_verdict(lat: float, lng: float, accuracy_m: float, regions: list[tuple[float, float, int]]) -> tuple[str, float]:
+    """Accept any circle; report distance to the circle with the greatest boundary clearance."""
+    distances = [(haversine_m(lat, lng, rlat, rlng), radius) for rlat, rlng, radius in regions]
+    distance, radius = min(distances, key=lambda item: item[0] - item[1])
+    return location_verdict(distance, accuracy_m, radius), distance

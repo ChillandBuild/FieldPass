@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import Float, Index, ForeignKey, Integer, LargeBinary, String, Text, UniqueConstraint, text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base, UTCDateTime
 
@@ -50,6 +50,16 @@ class Activity(Base):
     ends_at: Mapped[datetime] = mapped_column(UTCDateTime)
     created_by_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    venue_regions: Mapped[list[VenueRegion]] = relationship(cascade="all, delete-orphan", order_by="VenueRegion.position")
+
+
+class VenueRegion(Base):
+    __tablename__ = "venue_regions"
+    activity_id: Mapped[str] = mapped_column(ForeignKey("activities.id"), primary_key=True)
+    position: Mapped[int] = mapped_column(Integer, primary_key=True)
+    venue_lat: Mapped[float] = mapped_column(Float)
+    venue_lng: Mapped[float] = mapped_column(Float)
+    radius_m: Mapped[int] = mapped_column(Integer)
 
 
 class RosterEntry(Base):

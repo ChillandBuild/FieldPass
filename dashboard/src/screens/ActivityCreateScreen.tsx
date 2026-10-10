@@ -6,7 +6,9 @@ import { BoundarySummary } from '../components/BoundarySummary'
 import { Field } from '../components/Field'
 import { Loading, Notice } from '../components/Notice'
 import { StudentPicker } from '../components/StudentPicker'
-import { UseLocationButton } from '../components/UseLocationButton'
+import { VenuePicker } from '../components/VenuePicker'
+import type { VenuePoint } from '../lib/venueSearch'
+import type { VenueRegion } from '../api/types'
 import { useAsyncAction } from '../hooks/useAsyncAction'
 import { useLoad } from '../hooks/useLoad'
 import { dateToLocalInput, localTimeZoneLabel } from '../lib/time'
@@ -26,17 +28,20 @@ export function ActivityCreateScreen() {
   const [venueName, setVenueName] = useState('')
   const [startsAtLocal, setStartsAtLocal] = useState(() => dateToLocalInput(defaultStartDate()))
   const [endsAtLocal, setEndsAtLocal] = useState(() => dateToLocalInput(new Date(defaultStartDate().getTime() + 2 * HOUR_MS)))
-  const [latitude, setLatitude] = useState('')
-  const [longitude, setLongitude] = useState('')
-  const [radius, setRadius] = useState(String(DEFAULT_RADIUS_M))
+  const [venueLocation, setVenueLocation] = useState<VenuePoint | null>(null)
+  const [venueRegions, setVenueRegions] = useState<VenueRegion[] | null>(null)
+  const [radius, setRadius] = useState('25')
   const [studentIds, setStudentIds] = useState<string[]>([])
   const [errors, setErrors] = useState<ActivityFormErrors>({})
   const [created, setCreated] = useState<Activity | null>(null)
 
   const save = useAsyncAction(async () => {
-    const result = validateActivityForm({ name, venueName, startsAtLocal, endsAtLocal, latitude, longitude, radius, studentIds })
+    const first = venueRegions?.[0]
+    const result = validateActivityForm({ name, venueName, startsAtLocal, endsAtLocal,
+      latitude: venueLocation ? String(venueLocation.lat) : '', longitude: venueLocation ? String(venueLocation.lng) : '',
+      radius: first ? String(first.radius_m) : radius, studentIds })
     setErrors(result.ok ? {} : result.errors)
-    if (result.ok) setCreated(await api.createActivity(result.value))
+    if (result.ok) setCreated(await api.createActivity({ ...result.value, venue_regions: venueRegions ?? [] }))
   })
 
   function onSubmit(e: FormEvent): void {
@@ -76,17 +81,12 @@ export function ActivityCreateScreen() {
         <Field label={`Ends (${tz}, local time)`} error={errors.endsAt}>
           {(p) => <input id={p.id} type="datetime-local" value={endsAtLocal} aria-invalid={p.invalid} aria-describedby={p.describedBy} onChange={(e) => setEndsAtLocal(e.target.value)} />}
         </Field>
-        <Field label="Venue latitude" error={errors.latitude} hint="Decimal degrees, e.g. 12.9716">
-          {(p) => <input id={p.id} inputMode="decimal" value={latitude} aria-invalid={p.invalid} aria-describedby={p.describedBy} onChange={(e) => setLatitude(e.target.value)} />}
-        </Field>
-        <Field label="Venue longitude" error={errors.longitude} hint="Decimal degrees, e.g. 77.5946">
-          {(p) => <input id={p.id} inputMode="decimal" value={longitude} aria-invalid={p.invalid} aria-describedby={p.describedBy} onChange={(e) => setLongitude(e.target.value)} />}
-        </Field>
-        <Field label="Radius (metres)" error={errors.radius} hint="10 to 5000. Default 100.">
-          {(p) => <input id={p.id} inputMode="numeric" value={radius} aria-invalid={p.invalid} aria-describedby={p.describedBy} onChange={(e) => setRadius(e.target.value)} />}
-        </Field>
       </div>
-      <UseLocationButton onLocation={(lat, lng) => { setLatitude(String(lat)); setLongitude(String(lng)) }} />
+      <VenuePicker radius={Number(radius) >= 0 && Number(radius) <= 300 ? Number(radius) : DEFAULT_RADIUS_M}
+        onRadiusChange={(metres) => setRadius(String(metres))}
+        radiusError={errors.radius}
+        error={errors.latitude || errors.longitude ? 'Choose a venue on the map and confirm its location.' : undefined}
+        onChange={setVenueLocation} onRegionsChange={setVenueRegions} onName={(selectedName) => setVenueName((current) => current || selectedName)} />
       {students.isLoading ? <Loading what="students" /> : null}
       {students.error ? <Notice kind="error">{students.error}</Notice> : null}
       {students.data ? <StudentPicker students={students.data} selected={studentIds} onChange={setStudentIds} error={errors.students} /> : null}

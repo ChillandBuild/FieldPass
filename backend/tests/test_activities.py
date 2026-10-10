@@ -28,7 +28,7 @@ def test_create_activity_default_radius_when_omitted(api):
 
 
 @pytest.mark.parametrize("patch", [
-    {"radius_m": 9}, {"radius_m": 5001}, {"name": "  "}, {"venue_lat": 91}, {"venue_lng": -181},
+    {"radius_m": -1}, {"radius_m": 5001}, {"name": "  "}, {"venue_lat": 91}, {"venue_lng": -181},
     {"ends_at": "2026-10-10T09:00:00Z"}, {"student_ids": ["u_nope"]}, {"student_ids": ["u_f1"]},
     {"starts_at": "not-a-date"},
 ])

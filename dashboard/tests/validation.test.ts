@@ -28,12 +28,12 @@ describe('activity form validation', () => {
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.errors.latitude && r.errors.longitude).toBeTruthy()
   })
-  it.each(['9', '5001', '10.5', 'abc', ''])('rejects radius %s', (radius) => {
+  it.each(['-1', '5001', '10.5', 'abc', ''])('rejects radius %s', (radius) => {
     const r = validateActivityForm({ ...valid, radius })
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.errors.radius).toBeTruthy()
   })
-  it.each(['10', '5000'])('accepts boundary radius %s', (radius) => {
+  it.each(['0', '5000'])('accepts boundary radius %s', (radius) => {
     expect(validateActivityForm({ ...valid, radius }).ok).toBe(true)
   })
   it('rejects an end that is not after the start', () => {

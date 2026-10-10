@@ -206,7 +206,7 @@ checkpoint window; check-out from the check-in until `ends_at + 30 min`.
 | Method | Path | Auth | Request | Response |
 |---|---|---|---|---|
 | GET | `/students` | faculty | — | `{"items": [User]}` |
-| POST | `/activities` | faculty | `{"name", "venue_name", "venue_lat", "venue_lng", "radius_m" (default 100, 10–5000), "starts_at", "ends_at", "student_ids": [...]}` | `201 Activity` |
+| POST | `/activities` | faculty | `{"name", "venue_name", "venue_lat", "venue_lng", "radius_m" (default 100, 0–5000), "starts_at", "ends_at", "student_ids": [...]}` | `201 Activity` |
 | GET | `/activities` | any | — | `{"items": [Activity]}`. Student: assigned activities only, with `my_attendance`. Faculty: all |
 | GET | `/activities/{id}` | any | — | `Activity` (student must be on the roster) |
 | GET | `/activities/{id}/roster` | faculty | — | `{"items": [User]}` |
@@ -310,3 +310,17 @@ mention. Where it differs from the text above, this addendum describes what the 
 - Faculty and students have separate seed passwords. The demo `faculty1` account uses `FACULTY_SEED_PASSWORD`; the
   student accounts use `SEED_PASSWORD`. The two must be different, and the seed command refuses to run otherwise.
   This replaces "Password comes from `SEED_PASSWORD`" in the section above for `faculty1`.
+
+### Multiple venue regions (dashboard addendum)
+
+POST /activities accepts an optional `venue_regions` array. Each entry contains `venue_lat`,
+`venue_lng`, and `radius_m` with the same coordinate and 0–5000 m radius bounds as the primary venue.
+When supplied, the first entry is also stored in the legacy primary fields. When omitted or empty,
+those fields define the single attendance circle. Activity responses return the effective array.
+The dashboard requires every added location to be placed and confirms all circles together.
+Its radius slider spans 0–300 metres; larger radii remain supported for existing activities.
+
+Location checks select the circle with the smallest `distance - radius`. The accuracy-aware verdict
+is inside if any circle fully contains the location uncertainty; outside if all circles are outside;
+otherwise uncertain. Reported distance is to the selected circle's centre. Old activities remain
+valid without region rows. New rows live in the `venue_regions` table; no existing columns are changed.

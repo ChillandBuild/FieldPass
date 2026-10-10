@@ -168,6 +168,7 @@ def main() -> None:
             aid = flow_fixtures(api)["id"]
             review_fixtures(api, aid)
             error_fixtures(api, client, app, aid)
+        app.state.engine.dispose()  # release SQLite files before Windows removes the temp directory
     clock.set_clock(None)
     print(f"wrote {len(list(OUT.glob('*')))} fixtures to {OUT}")
 

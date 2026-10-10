@@ -120,6 +120,12 @@ class AttendanceRecordOut(BaseModel):
     next_actions: list[Action]
 
 
+class VenueRegionIn(BaseModel):
+    venue_lat: float = Field(ge=-90, le=90)
+    venue_lng: float = Field(ge=-180, le=180)
+    radius_m: int = Field(ge=0, le=5000)
+
+
 class ActivityOut(BaseModel):
     id: str
     name: str
@@ -127,6 +133,7 @@ class ActivityOut(BaseModel):
     venue_lat: float
     venue_lng: float
     radius_m: int
+    venue_regions: list[VenueRegionIn] = Field(default_factory=list)
     starts_at: str
     ends_at: str
     created_by: str
@@ -215,7 +222,8 @@ class ActivityIn(BaseModel):
     venue_name: Name200
     venue_lat: float = Field(ge=-90, le=90)
     venue_lng: float = Field(ge=-180, le=180)
-    radius_m: int = Field(default=100, ge=10, le=5000)
+    radius_m: int = Field(default=100, ge=0, le=5000)
+    venue_regions: list[VenueRegionIn] = Field(default_factory=list)
     starts_at: datetime
     ends_at: datetime
     student_ids: list[str] = Field(default_factory=list, max_length=500)

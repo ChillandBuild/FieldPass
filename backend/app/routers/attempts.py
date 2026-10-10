@@ -12,7 +12,7 @@ from app.config import Settings
 from app.db import get_session
 from app.deps import get_face_engine, get_photo_store
 from app.face import FaceEngine
-from app.geo import haversine_m, location_verdict
+from app.geo import regions_verdict
 from app.models import Activity, Attempt, AttendanceEvent, CheckpointWindow, Enrollment, User, new_id
 from app.photo_store import PhotoStore
 from app.routers.activities import get_activity, require_on_roster
@@ -165,8 +165,9 @@ def submit_attempt(
         if saved is None:
             raise
         return event_out(saved)
-    distance = haversine_m(lat, lng, activity.venue_lat, activity.venue_lng)
-    loc = (location_verdict(distance, accuracy_m, activity.radius_m), round(distance), round(accuracy_m), captured)
+    regions = [(r.venue_lat, r.venue_lng, r.radius_m) for r in activity.venue_regions]
+    verdict, distance = regions_verdict(lat, lng, accuracy_m, regions or [(activity.venue_lat, activity.venue_lng, activity.radius_m)])
+    loc = (verdict, round(distance), round(accuracy_m), captured)
     face = _face_verdict(engine, store, enrollment, analysis.embedding or b"")
     saved = _persist(session, _build_event(attempt, activity, now, loc, face), enrollment.id)
     return event_out(saved)

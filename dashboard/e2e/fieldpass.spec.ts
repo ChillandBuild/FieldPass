@@ -92,9 +92,14 @@ test('3. faculty creates an activity through the form and sees the boundary', as
   await s.page.getByLabel('Venue name').fill('E2E plant gate')
   await s.page.getByLabel(/^Starts/).fill(localInputValue(new Date(Date.now() - 60_000)))
   await s.page.getByLabel(/^Ends/).fill(localInputValue(new Date(Date.now() + 3 * 3600_000)))
-  await s.page.getByLabel('Venue latitude').fill(String(VENUE.lat))
-  await s.page.getByLabel('Venue longitude').fill(String(VENUE.lng))
-  await s.page.getByLabel('Radius (metres)').fill('100')
+  await s.page.route('https://photon.komoot.io/api/**', (route) => route.fulfill({ json: { features: [{
+    geometry: { coordinates: [VENUE.lng, VENUE.lat] }, properties: { name: 'E2E plant gate', city: 'Bengaluru' },
+  }] } }))
+  await s.page.getByLabel('Search venue or address').fill('E2E plant gate, Bengaluru')
+  await s.page.getByRole('button', { name: 'Search venue', exact: true }).click()
+  await s.page.getByRole('button', { name: /E2E plant gate.*Bengaluru/ }).click()
+  await s.page.getByRole('button', { name: 'Confirm venue location' }).click()
+  await s.page.getByRole('slider', { name: 'Drag to resize attendance area' }).fill('100')
   for (const name of ['Asha Verma', 'Rohan Iyer', 'Fatima Khan']) await s.page.getByLabel(new RegExp(name)).check()
   await s.page.getByRole('button', { name: 'Create activity' }).click()
 
