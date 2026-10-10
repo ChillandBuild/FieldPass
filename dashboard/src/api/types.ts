@@ -11,6 +11,11 @@ export type ReviewReason =
   | 'location_outside'
   | 'face_mismatch'
   | 'face_uncertain'
+  | 'liveness_failed'
+  | 'location_mocked'
+  | 'location_repeated'
+  | 'device_rooted'
+  | 'device_emulator'
 export type ObservationType = 'present' | 'absent' | 'left_early' | 'other'
 export type DecisionKind = 'confirmed' | 'not_confirmed'
 
@@ -19,6 +24,11 @@ export interface User {
   username: string
   full_name: string
   role: Role
+}
+
+/** A student as faculty see them: when their phone was bound (null: none, the next login binds one). */
+export interface Student extends User {
+  device_bound_at: string | null
 }
 
 export interface Enrollment {
@@ -175,7 +185,8 @@ export interface Api {
   enrollmentPhoto(id: string): Promise<Blob>
   approveEnrollment(id: string): Promise<Enrollment>
   rejectEnrollment(id: string, reason: string): Promise<Enrollment>
-  listStudents(): Promise<User[]>
+  listStudents(): Promise<Student[]>
+  resetDevice(studentId: string): Promise<Student>
   listActivities(): Promise<Activity[]>
   getActivity(id: string): Promise<Activity>
   createActivity(input: CreateActivityInput): Promise<Activity>

@@ -16,6 +16,7 @@ export function AppShell() {
         <nav className="app-nav" aria-label="Main">
           <NavLink to="/enrollments">Enrollments</NavLink>
           <NavLink to="/activities">Activities</NavLink>
+          <NavLink to="/students">Students</NavLink>
           <NavLink to="/about">What this proves</NavLink>
         </nav>
         <div className="app-user">
