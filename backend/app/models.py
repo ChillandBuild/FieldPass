@@ -95,6 +95,8 @@ class Attempt(Base):
     checkpoint_id: Mapped[str | None] = mapped_column(ForeignKey("checkpoint_windows.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime)
     expires_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    nonce: Mapped[str] = mapped_column(String)
+    challenge: Mapped[str] = mapped_column(String)
 
 
 class AttendanceEvent(Base):

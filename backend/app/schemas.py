@@ -12,6 +12,7 @@ Action = Literal["check_in", "checkpoint", "check_out"]
 AttendanceStatus = Literal["recorded", "needs_review", "confirmed", "not_confirmed"]
 LocationVerdict = Literal["inside", "uncertain", "outside"]
 FaceVerdict = Literal["match", "uncertain", "no_match"]
+HeadTurn = Literal["left", "right"]
 ObservationType = Literal["present", "absent", "left_early", "other"]
 
 
@@ -158,6 +159,8 @@ class AttemptOut(BaseModel):
     created_at: str
     expires_at: str
     checkpoint_id: str | None
+    nonce: str
+    challenge: HeadTurn
 
 
 class RegisterOut(BaseModel):

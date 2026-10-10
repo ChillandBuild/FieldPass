@@ -55,6 +55,7 @@ def make_event(session, student="u_s1", activity="act1", action="check_in", chec
     attempt = Attempt(
         id=new_id("att"), student_id=student, activity_id=activity, action=action, checkpoint_id=None,
         created_at=now, expires_at=now + timedelta(seconds=90),
+        nonce="n0nce", challenge="left",
     )
     session.add(attempt)
     session.flush()

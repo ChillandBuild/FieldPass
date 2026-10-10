@@ -267,3 +267,19 @@ def test_small_clock_skew_into_the_future_is_tolerated(api, ready):
     assert LOCATION_FUTURE_TOLERANCE_SECONDS == 5
     attempt = api.attempt("student1", ready["id"], "check_in").json()
     assert api.submit("student1", attempt["id"], face("asha"), captured_ago_s=-5).status_code == 200
+
+
+def test_attempt_has_nonce_and_challenge(api, ready):
+    first = api.attempt("student1", ready["id"], "check_in").json()
+    assert len(first["nonce"]) >= 16 and first["challenge"] in ("left", "right")
+
+
+def test_each_attempt_gets_a_fresh_nonce(api, ready):
+    first = api.attempt("student1", ready["id"], "check_in").json()
+    second = api.attempt("student1", ready["id"], "check_in").json()
+    assert first["nonce"] != second["nonce"]
+
+
+def test_both_challenge_directions_occur(api, ready):
+    seen = {api.attempt("student1", ready["id"], "check_in").json()["challenge"] for _ in range(40)}
+    assert seen == {"left", "right"}  # chance of a false failure: 2 * 0.5**40

@@ -35,6 +35,7 @@ class Api:
         self.clock = clock
         self._tokens: dict[str, dict[str, str]] = {}
         self.keys: dict[str, tuple] = {}  # username -> (private key, public b64): one phone per student
+        self.attempts: dict[str, dict] = {}  # attempt id -> create response
 
     def auth(self, username: str) -> dict[str, str]:
         if username not in self._tokens:
@@ -77,7 +78,10 @@ class Api:
         return resp.json()
 
     def attempt(self, username: str, activity_id: str, action: str):
-        return self.post(username, f"/activities/{activity_id}/attempts", json={"action": action})
+        resp = self.post(username, f"/activities/{activity_id}/attempts", json={"action": action})
+        if resp.status_code == 201:
+            self.attempts[resp.json()["id"]] = resp.json()
+        return resp
 
     def submit(self, username: str, attempt_id: str, selfie: bytes, lat: float | None = None, lng: float | None = None,
                accuracy: float = 10, captured_ago_s: float = 5):

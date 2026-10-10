@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import secrets
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
@@ -25,6 +26,9 @@ router = APIRouter(tags=["attempts"])
 
 # A reading stamped more than this far ahead of the server clock cannot be fresh; it is rejected as stale.
 LOCATION_FUTURE_TOLERANCE_SECONDS = 5
+
+# Directions are the student's own left and right.
+HEAD_TURNS = ("left", "right")
 
 
 def _approved_enrollment(session: Session, student_id: str) -> Enrollment:
@@ -60,12 +64,14 @@ def create_attempt(
         id=new_id("att"), student_id=student.id, activity_id=activity.id, action=body.action,
         checkpoint_id=checkpoint_id, created_at=now,
         expires_at=now + timedelta(seconds=settings.attempt_ttl_seconds),
+        nonce=secrets.token_urlsafe(16), challenge=secrets.choice(HEAD_TURNS),
     )
     session.add(attempt)
     session.commit()
     return AttemptOut(
         id=attempt.id, activity_id=attempt.activity_id, action=attempt.action, created_at=clock.to_iso(now),
         expires_at=clock.to_iso(attempt.expires_at), checkpoint_id=checkpoint_id,
+        nonce=attempt.nonce, challenge=attempt.challenge,
     )
 
 
