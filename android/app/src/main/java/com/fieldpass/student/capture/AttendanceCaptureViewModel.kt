@@ -183,7 +183,8 @@ class AttendanceCaptureViewModel(
         when {
             e.isLostResponse ->
                 _state.update { it.copy(phase = CapturePhase.READY_TO_SUBMIT, pendingReplay = true, error = e.code) }
-            e.code == ErrorCode.UNUSABLE_CAPTURE || e.code == ErrorCode.MULTIPLE_FACES -> {
+            e.code == ErrorCode.UNUSABLE_CAPTURE || e.code == ErrorCode.MULTIPLE_FACES ||
+                e.code == ErrorCode.FACE_NOT_MATCHED -> {
                 clearSelfie()
                 _state.update {
                     it.copy(phase = CapturePhase.AWAITING_SELFIE, selfie = null, pendingReplay = false, error = e.code)

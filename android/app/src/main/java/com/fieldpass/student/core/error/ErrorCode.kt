@@ -23,6 +23,7 @@ enum class ErrorCode(val wire: String?, @StringRes val messageRes: Int) {
     VALIDATION_ERROR("validation_error", R.string.error_validation),
     UNUSABLE_CAPTURE("unusable_capture", R.string.error_unusable_capture),
     MULTIPLE_FACES("multiple_faces", R.string.error_multiple_faces),
+    FACE_NOT_MATCHED("face_not_matched", R.string.error_face_not_matched),
     LOCATION_STALE("location_stale", R.string.error_location_stale),
 
     // Client-side conditions (no wire code).

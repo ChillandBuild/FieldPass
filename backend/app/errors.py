@@ -84,6 +84,10 @@ def multiple_faces() -> ApiError:
     return ApiError(422, "multiple_faces", "More than one face was found. Only you should be in the photo.")
 
 
+def face_not_matched() -> ApiError:
+    return ApiError(422, "face_not_matched", "This face does not match the enrolled photo. Nothing was recorded.")
+
+
 def location_stale() -> ApiError:
     return ApiError(422, "location_stale", "Your location reading is too old. Try again.")
 

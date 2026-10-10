@@ -99,10 +99,11 @@ def test_no_numeric_scores_or_liveness_anywhere_in_event(api, ready):
     assert "score" not in text and "confidence" not in text and "liveness" not in text
 
 
-def test_wrong_face_needs_review_face_mismatch(api, ready):
-    body = api.do("student1", ready["id"], "check_in", "someone-else").json()
-    assert body["status"] == "needs_review"
-    assert body["review_reasons"] == ["face_mismatch"] and body["face"]["verdict"] == "no_match"
+def test_wrong_face_is_refused_and_nothing_is_recorded(api, ready):
+    attempt = api.attempt("student1", ready["id"], "check_in").json()
+    assert err(api.submit("student1", attempt["id"], face("someone-else"))) == (422, "face_not_matched")
+    # attempt stays open: the right person can still use it
+    assert api.submit("student1", attempt["id"], face("asha")).json()["status"] == "recorded"
 
 
 def test_uncertain_face_needs_review_face_uncertain(api, ready):
@@ -124,8 +125,8 @@ def test_location_verdicts_through_api(api, ready, metres, accuracy, verdict, re
 
 
 def test_location_and_face_reasons_combine(api, ready):
-    body = api.do("student1", ready["id"], "check_in", "other", lat=offset_lat(500)).json()
-    assert body["review_reasons"] == ["location_outside", "face_mismatch"]
+    body = api.do("student1", ready["id"], "check_in", "asha~", lat=offset_lat(500)).json()
+    assert body["review_reasons"] == ["location_outside", "face_uncertain"]
 
 
 def test_unusable_capture_keeps_attempt_open(api, ready):

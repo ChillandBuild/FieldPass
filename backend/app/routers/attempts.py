@@ -169,5 +169,8 @@ def submit_attempt(
     verdict, distance = regions_verdict(lat, lng, accuracy_m, regions or [(activity.venue_lat, activity.venue_lng, activity.radius_m)])
     loc = (verdict, round(distance), round(accuracy_m), captured)
     face = _face_verdict(engine, store, enrollment, analysis.embedding or b"")
+    if face == "no_match":
+        # A clearly different face is refused outright: nothing is saved and the attempt stays open.
+        raise errors.face_not_matched()
     saved = _persist(session, _build_event(attempt, activity, now, loc, face), enrollment.id)
     return event_out(saved)

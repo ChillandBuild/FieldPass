@@ -14,6 +14,7 @@
     <string name="error_image_too_large">The photo is too large to send. Take it again.</string>
     <string name="error_validation">Something was missing from the request. Please try again.</string>
     <string name="error_unusable_capture">We could not use that photo. Hold the phone at eye level, face the light, keep your face in the frame, and retake it.</string>
+    <string name="error_face_not_matched">This is not the same person as the enrolled photo. Nothing was recorded.</string>
     <string name="error_multiple_faces">More than one face was in the photo. Make sure only you are in the frame, then retake it.</string>
     <string name="error_location_stale">Your location reading was too old. We are getting a fresh one.</string>
     <string name="error_network">Cannot reach the server. Check your Wi-Fi or hotspot and the server address, then try again.</string>
