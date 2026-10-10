@@ -3,11 +3,14 @@ from __future__ import annotations
 
 import math
 import os
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
 
 from cryptography.fernet import Fernet
+from sqlalchemy.engine import URL, make_url
+from sqlalchemy.exc import ArgumentError
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 
@@ -24,6 +27,10 @@ MAX_WINDOW_MINUTES = 7 * 24 * 60  # an activity lasts at most 7 days; a longer l
 REQUIRED_SECRETS = ("JWT_SECRET", "PHOTO_ENCRYPTION_KEY", "SEED_PASSWORD", "FACULTY_SEED_PASSWORD")
 MIN_JWT_SECRET_CHARS = 32
 TRUE_WORDS = ("1", "true", "yes", "on")
+
+DEFAULT_DATABASE_SCHEMA = "fieldpass"
+SCHEMA_PATTERN = re.compile(r"[a-z_][a-z0-9_]{0,62}")  # a plain lower-case Postgres identifier, safe to quote
+POSTGRES_SCHEMES = ("postgres", "postgresql", "postgresql+psycopg")  # all run on the psycopg 3 driver
 
 
 class ConfigError(RuntimeError):
@@ -48,6 +55,9 @@ class Settings:
     enable_docs: bool = False
     checkin_lead_minutes: float = DEFAULT_CHECKIN_LEAD_MINUTES
     checkout_grace_minutes: float = DEFAULT_CHECKOUT_GRACE_MINUTES
+    # Empty means SQLite at database_path. Otherwise a normalised postgresql+psycopg:// URL (it holds a password).
+    database_url: str = field(default="", repr=False)
+    database_schema: str = DEFAULT_DATABASE_SCHEMA
 
 
 def _read_env_file(path: Path) -> dict[str, str]:
@@ -100,6 +110,36 @@ def _check_secrets(env: dict[str, str]) -> None:
         ) from exc
 
 
+def parse_database_url(raw: str) -> URL:
+    """Validate a Postgres URL and return it on the psycopg 3 driver. Errors never echo the URL (it has a password)."""
+    scheme = raw.partition("://")[0].lower() if "://" in raw else ""
+    if scheme not in POSTGRES_SCHEMES:
+        shown = scheme if re.fullmatch(r"[a-z0-9+.\-]{1,30}", scheme) else "(none)"
+        raise ConfigError(
+            f"DATABASE_URL must start with postgres://, postgresql:// or postgresql+psycopg:// (found scheme: {shown}). "
+            "Leave it empty to use SQLite."
+        )
+    try:
+        url = make_url(raw)
+    except (ArgumentError, ValueError):
+        raise ConfigError("DATABASE_URL is not a valid URL. Copy the connection string from Supabase again.") from None
+    if not url.host or not url.database:
+        raise ConfigError("DATABASE_URL needs a host and a database name (postgresql://user:password@host:5432/postgres).")
+    return url.set(drivername="postgresql+psycopg")
+
+
+def _database_url(env: dict[str, str]) -> str:
+    raw = env.get("DATABASE_URL", "").strip()
+    return parse_database_url(raw).render_as_string(hide_password=False) if raw else ""
+
+
+def _database_schema(env: dict[str, str]) -> str:
+    schema = env.get("DATABASE_SCHEMA") or DEFAULT_DATABASE_SCHEMA
+    if not SCHEMA_PATTERN.fullmatch(schema):
+        raise ConfigError(f"DATABASE_SCHEMA must be a lower-case identifier like 'fieldpass', got {schema!r}")
+    return schema
+
+
 def load_settings(env_file: Path | None = None, environ: dict[str, str] | None = None) -> Settings:
     """Build settings from backend/.env overlaid by real environment variables."""
     env = _read_env_file(env_file or BACKEND_DIR / ".env")
@@ -130,6 +170,8 @@ def load_settings(env_file: Path | None = None, environ: dict[str, str] | None =
         enable_docs=env.get("ENABLE_DOCS", "").strip().lower() in TRUE_WORDS,
         checkin_lead_minutes=_minutes(env, "CHECKIN_LEAD_MINUTES", DEFAULT_CHECKIN_LEAD_MINUTES),
         checkout_grace_minutes=_minutes(env, "CHECKOUT_GRACE_MINUTES", DEFAULT_CHECKOUT_GRACE_MINUTES),
+        database_url=_database_url(env),
+        database_schema=_database_schema(env),
     )
 
 

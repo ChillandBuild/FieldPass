@@ -9,14 +9,14 @@ import pytest
 
 from app import clock, gen_secrets, seed
 from app.config import ConfigError
-from app.db import make_engine, make_session_factory
+from app.db import make_engine_for, make_session_factory
 from app.models import Activity, RosterEntry, User
 from app.security import verify_password
 from tests.helpers import FACULTY_PASSWORD, PASSWORD
 
 
 def sessions(settings):
-    return make_session_factory(make_engine(settings.database_path))()
+    return make_session_factory(make_engine_for(settings))()
 
 
 def test_seed_creates_exact_demo_accounts_and_is_idempotent(settings, test_clock):
