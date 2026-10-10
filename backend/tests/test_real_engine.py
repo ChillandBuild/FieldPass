@@ -51,3 +51,10 @@ def test_real_engine_same_person_matches_and_other_does_not(engine):
     assert a1.count == a2.count == b.count == 1
     assert engine.compare(a1.embedding, a2.embedding) == "match"
     assert engine.compare(a1.embedding, b.embedding) == "no_match"
+
+
+@needs_models
+@needs_samples
+def test_real_photo_has_a_nose_offset(engine):
+    analysis = engine.analyze((SAMPLES / "person_a_1.jpg").read_bytes())
+    assert analysis.count == 1 and isinstance(analysis.nose_offset, float)

@@ -2,6 +2,7 @@
 
 Image bytes are plain markers:  b"FACE:alice" is one face with identity "alice";
 b"FACES" is two faces; anything else is "no face".
+b"FACE:alice@left" is alice turned to her own left (nose offset +0.35); "@right" is -0.35; no suffix is 0.0.
 Compare: same identity -> match; "alice" vs "alice~" (same base) -> uncertain; else no_match.
 """
 from __future__ import annotations
@@ -15,6 +16,7 @@ def face(identity: str) -> bytes:
 
 TWO_FACES = b"FACES"
 BLANK = b"BLANK"
+POSE_OFFSETS = {b"": 0.0, b"left": 0.35, b"right": -0.35}
 
 
 class FakeFaceEngine:
@@ -24,8 +26,10 @@ class FakeFaceEngine:
     def analyze(self, image_bytes: bytes) -> FaceAnalysis:
         self.analyzed.append(image_bytes)
         if image_bytes.startswith(b"FACE:"):
-            identity = image_bytes[len(b"FACE:"):]
-            return FaceAnalysis(count=1, embedding=identity, normalized_jpeg=image_bytes)
+            identity, _, pose = image_bytes[len(b"FACE:"):].partition(b"@")
+            return FaceAnalysis(
+                count=1, embedding=identity, normalized_jpeg=image_bytes, nose_offset=POSE_OFFSETS.get(pose, 0.0)
+            )
         if image_bytes == TWO_FACES:
             return FaceAnalysis(count=2)
         return FaceAnalysis(count=0)

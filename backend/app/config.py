@@ -20,6 +20,8 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_FACE_MATCH_THRESHOLD = 0.363
 DEFAULT_FACE_UNCERTAIN_MARGIN = 0.1
 DEFAULT_FACE_DETECT_SCORE = 0.9
+DEFAULT_LIVENESS_FRONT_MAX_OFFSET = 0.12
+DEFAULT_LIVENESS_TURN_MIN_OFFSET = 0.25
 
 DEFAULT_CHECKIN_LEAD_MINUTES = 15.0
 DEFAULT_CHECKOUT_GRACE_MINUTES = 30.0
@@ -64,6 +66,9 @@ class Settings:
     photo_bucket: str = "enrollment-photos"
     # Minimum YuNet confidence for a face to count. Lower is more forgiving of close-up or dim selfies.
     face_detect_score: float = DEFAULT_FACE_DETECT_SCORE
+    liveness_front_max_offset: float = DEFAULT_LIVENESS_FRONT_MAX_OFFSET
+    liveness_turn_min_offset: float = DEFAULT_LIVENESS_TURN_MIN_OFFSET
+    liveness_mirrored: bool = False
 
 
 def _read_env_file(path: Path) -> dict[str, str]:
@@ -182,6 +187,13 @@ def load_settings(env_file: Path | None = None, environ: dict[str, str] | None =
         supabase_service_key=env.get("SUPABASE_SERVICE_KEY", "").strip(),
         photo_bucket=env.get("SUPABASE_PHOTO_BUCKET", "").strip() or "enrollment-photos",
         face_detect_score=float(_number(env, "FACE_DETECT_SCORE", DEFAULT_FACE_DETECT_SCORE, float)),
+        liveness_front_max_offset=float(
+            _number(env, "LIVENESS_FRONT_MAX_OFFSET", DEFAULT_LIVENESS_FRONT_MAX_OFFSET, float)
+        ),
+        liveness_turn_min_offset=float(
+            _number(env, "LIVENESS_TURN_MIN_OFFSET", DEFAULT_LIVENESS_TURN_MIN_OFFSET, float)
+        ),
+        liveness_mirrored=env.get("LIVENESS_MIRRORED", "").strip().lower() in TRUE_WORDS,
     )
 
 

@@ -21,11 +21,13 @@ class FaceAnalysis:
     count: number of usable faces (0 also covers unreadable images).
     embedding: opaque bytes, set only when count == 1.
     normalized_jpeg: upright (EXIF applied), downscaled, metadata-free JPEG; set when count == 1.
+    nose_offset: head-turn measure, see app/liveness.py; set when count == 1 and landmarks are usable.
     """
 
     count: int
     embedding: bytes | None = None
     normalized_jpeg: bytes | None = None
+    nose_offset: float | None = None
 
 
 class FaceEngine(Protocol):

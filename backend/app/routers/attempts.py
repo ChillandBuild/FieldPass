@@ -8,12 +8,12 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app import clock, devices, errors, rules
+from app import clock, devices, errors, liveness, rules
 from app.config import Settings
 from app.db import get_session
 from app.device_keys import canonical_message, location_fingerprint, verify_signature
 from app.deps import get_face_engine, get_photo_store
-from app.face import FaceEngine
+from app.face import NO_MATCH, FaceAnalysis, FaceEngine
 from app.geo import regions_verdict
 from app.models import Activity, Attempt, AttendanceEvent, CheckpointWindow, Enrollment, User, new_id
 from app.photo_store import PhotoStore
@@ -82,6 +82,19 @@ def _event_for(session: Session, attempt_id: str) -> AttendanceEvent | None:
 
 def _face_verdict(engine: FaceEngine, store: PhotoStore, enrollment: Enrollment, probe: bytes) -> str:
     return engine.compare(store.decrypt(enrollment.embedding_enc), probe)
+
+
+def _liveness_reasons(
+    engine: FaceEngine, straight: FaceAnalysis, turn_bytes: bytes, challenge: str, limits: liveness.LivenessLimits
+) -> list[str]:
+    """Photo B must be one face, the same person as photo A, turned the way the server asked."""
+    turned = engine.analyze(turn_bytes)
+    if turned.count != 1 or turned.embedding is None or straight.embedding is None:
+        return ["liveness_failed"]
+    if engine.compare(straight.embedding, turned.embedding) == NO_MATCH:
+        return ["liveness_failed"]
+    ok = liveness.head_turn_ok(straight.nose_offset, turned.nose_offset, challenge, limits)
+    return [] if ok else ["liveness_failed"]
 
 
 def _integrity_reasons(is_mock: bool, rooted: bool, emulator: bool, repeated: bool) -> list[str]:
@@ -217,6 +230,7 @@ def submit_attempt(
         raise errors.face_not_matched()
     fingerprint = location_fingerprint(lat, lng)
     repeated = any(e.location_fingerprint == fingerprint for e in events)
-    extra = _integrity_reasons(location_is_mock, device_rooted, device_emulator, repeated)
+    extra = _liveness_reasons(engine, analysis, turn_bytes, attempt.challenge, liveness.limits_from(settings))
+    extra += _integrity_reasons(location_is_mock, device_rooted, device_emulator, repeated)
     saved = _persist(session, _build_event(attempt, activity, now, loc, face, extra, fingerprint), enrollment.id)
     return event_out(saved)
