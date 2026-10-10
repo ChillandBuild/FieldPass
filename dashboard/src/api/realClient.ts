@@ -15,6 +15,7 @@ import type {
   Observation,
   ObservationInput,
   Register,
+  Student,
   User,
 } from './types'
 
@@ -94,7 +95,8 @@ export const realApi: Api = {
     }),
   rejectEnrollment: (id, reason) =>
     json<Enrollment>(`/enrollments/${encodeURIComponent(id)}/reject`, { method: 'POST', body: { reason } }),
-  listStudents: async () => (await json<{ items: User[] }>('/students')).items,
+  listStudents: async () => (await json<{ items: Student[] }>('/students')).items,
+  resetDevice: (id) => json<Student>(`/students/${encodeURIComponent(id)}/device/reset`, { method: 'POST' }),
   listActivities: async () => (await json<{ items: Activity[] }>('/activities')).items,
   getActivity: (id) => json<Activity>(`/activities/${encodeURIComponent(id)}`),
   createActivity: (input: CreateActivityInput) => json<Activity>('/activities', { method: 'POST', body: input }),

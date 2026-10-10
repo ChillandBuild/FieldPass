@@ -20,6 +20,11 @@ describe('review reason labels', () => {
     ['location_outside', 'Location outside the boundary'],
     ['face_mismatch', 'Face comparison did not match'],
     ['face_uncertain', 'Face comparison uncertain'],
+    ['liveness_failed', 'Head-turn check failed'],
+    ['location_mocked', 'Fake GPS was on'],
+    ['location_repeated', 'Same exact spot as an earlier check-in'],
+    ['device_rooted', 'Rooted phone'],
+    ['device_emulator', 'Running on an emulator'],
   ]
   it.each(cases)('labels %s in plain words', (reason, label) => {
     expect(reasonLabel(reason)).toBe(label)

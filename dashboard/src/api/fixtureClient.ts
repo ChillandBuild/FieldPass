@@ -4,10 +4,11 @@ import { FACULTY, STUDENTS, emptyRecord, makeDecision } from './fixtureData'
 import { recomputeRecord, seedRegisterRows } from './fixtureRegisters'
 import { seedActivities, seedEnrollments } from './fixtureData'
 import type {
-  Activity, Api, AttendanceRecord, CheckpointWindow, Enrollment, Observation, User,
+  Activity, Api, AttendanceRecord, CheckpointWindow, Enrollment, Observation, Student, User,
 } from './types'
 
 const MIN = 60_000
+const DAY = 24 * 60 * MIN
 const LATENCY_MS = 120
 const iso = (ms: number): string => new Date(ms).toISOString().replace(/\.\d{3}Z$/, 'Z')
 const wait = (): Promise<void> => new Promise((r) => setTimeout(r, LATENCY_MS))
@@ -18,6 +19,7 @@ interface Store {
   rows: Record<string, AttendanceRecord[]>
   enrollments: Enrollment[]
   counter: number
+  devices: Record<string, string | null>
 }
 
 function createStore(): Store {
@@ -25,7 +27,10 @@ function createStore(): Store {
   const activities = seedActivities(now)
   const rows: Record<string, AttendanceRecord[]> = {}
   for (const a of activities) rows[a.id] = seedRegisterRows(a, now)
-  return { activities, rows, enrollments: seedEnrollments(now), counter: 100 }
+  const devices: Record<string, string | null> = {
+    u_s1: iso(now - 3 * DAY), u_s2: iso(now - 3 * DAY), u_s3: iso(now - 1 * DAY), u_s4: null,
+  }
+  return { activities, rows, enrollments: seedEnrollments(now), counter: 100, devices }
 }
 
 let store = createStore()
@@ -37,6 +42,10 @@ export function resetFixtures(): void {
 }
 
 const copy = <T,>(v: T): T => structuredClone(v)
+
+function withDevice(student: User): Student {
+  return { ...student, device_bound_at: store.devices[student.id] ?? null }
+}
 const nextId = (prefix: string): string => `${prefix}_${++store.counter}`
 
 function requireFaculty(): void {
@@ -116,7 +125,15 @@ export const fixtureApi: Api = {
     if (reason.trim().length === 0) throw new ApiError('validation_error', 'Reason required', 422)
     return replaceEnrollment({ ...e, status: 'rejected', decided_at: iso(Date.now()), decided_by: FACULTY.full_name, decision_reason: reason })
   },
-  listStudents: async () => { await wait(); requireFaculty(); return copy(STUDENTS) },
+  listStudents: async () => { await wait(); requireFaculty(); return copy(STUDENTS.map(withDevice)) },
+  resetDevice: async (id) => {
+    await wait()
+    requireFaculty()
+    const student = STUDENTS.find((s) => s.id === id)
+    if (!student) throw new ApiError('not_found', 'No such student', 404)
+    store = { ...store, devices: { ...store.devices, [id]: null } }
+    return copy(withDevice(student))
+  },
   listActivities: async () => { await wait(); requireFaculty(); return copy(store.activities.map(withOpenCheckpoint)) },
   getActivity: async (id) => { await wait(); requireFaculty(); return copy(withOpenCheckpoint(findActivity(id))) },
   createActivity: async (input) => {
