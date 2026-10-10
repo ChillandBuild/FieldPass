@@ -24,7 +24,7 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: DATABASE_SCHEMA
-        value: fieldpass
+        value: public
       - key: SUPABASE_URL
         value: https://dmjcjiihnvdrpqyckwlu.supabase.co
       - key: SUPABASE_SERVICE_KEY
