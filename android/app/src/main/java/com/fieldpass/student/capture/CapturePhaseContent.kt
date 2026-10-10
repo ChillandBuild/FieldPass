@@ -8,6 +8,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -80,13 +84,24 @@ private fun PoorAccuracy(state: CaptureUiState, vm: AttendanceCaptureViewModel) 
 
 @Composable
 private fun SelfieStep(state: CaptureUiState, vm: AttendanceCaptureViewModel) {
+    val attempt = state.attempt ?: return
+    var onePhoto by rememberSaveable { mutableStateOf(false) }
     Text(stringResource(R.string.attempt_selfie_heading), style = MaterialTheme.typography.titleMedium)
     Text(stringResource(R.string.attempt_selfie_body))
     state.error?.let { ErrorText(it) }
     Text(stringResource(R.string.camera_tips), style = MaterialTheme.typography.bodySmall)
     PermissionGate(GatedPermission.CAMERA) {
-        // Interim until the guided camera: the one photo is sent as both parts (server adds liveness_failed).
-        CameraCapture(onCaptured = { vm.onPhotosCaptured(it, it) }, onCaptureFailed = vm::onCameraError)
+        if (onePhoto) {
+            Text(stringResource(R.string.liveness_one_photo_note), style = MaterialTheme.typography.bodySmall)
+            CameraCapture(onCaptured = { vm.onPhotosCaptured(it, it.copyOf()) }, onCaptureFailed = vm::onCameraError)
+        } else {
+            LivenessCamera(
+                challenge = attempt.challenge,
+                onCaptured = vm::onPhotosCaptured,
+                onCaptureFailed = vm::onCameraError,
+                onUseOnePhoto = { onePhoto = true },
+            )
+        }
     }
 }
 
@@ -95,6 +110,7 @@ private fun ReadyToSend(state: CaptureUiState, vm: AttendanceCaptureViewModel) {
     val sending = state.phase == CapturePhase.SUBMITTING
     Text(stringResource(R.string.attempt_ready_heading), style = MaterialTheme.typography.titleMedium)
     state.selfie?.let { PhotoPreview(it) }
+    state.turnPhoto?.let { PhotoPreview(it) }
     if (state.pendingReplay) {
         state.error?.let { ErrorText(it) }
         Text(stringResource(R.string.attempt_replay_note))
