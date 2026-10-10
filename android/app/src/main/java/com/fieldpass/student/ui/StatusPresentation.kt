@@ -17,6 +17,13 @@ object StatusPresentation {
         AttendanceStatus.NOT_CONFIRMED -> R.string.status_not_confirmed
     }
 
+    /** Short wording for the tracker: a record still waiting on faculty reads "Awaiting faculty decision". */
+    @StringRes
+    fun awaitingLabel(status: AttendanceStatus?): Int = when (status) {
+        AttendanceStatus.RECORDED, AttendanceStatus.NEEDS_REVIEW -> R.string.step_status_awaiting
+        else -> label(status)
+    }
+
     @StringRes
     fun meaning(status: AttendanceStatus): Int = when (status) {
         AttendanceStatus.RECORDED -> R.string.status_recorded_meaning

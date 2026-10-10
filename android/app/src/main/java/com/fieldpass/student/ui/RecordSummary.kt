@@ -2,7 +2,11 @@ package com.fieldpass.student.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -17,7 +21,7 @@ import com.fieldpass.student.core.time.TimeFormat
 /** Everything the student can see about one activity's record, using the contract's status meanings. */
 @Composable
 fun RecordSummary(record: AttendanceRecord, modifier: Modifier = Modifier) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         StatusChip(record.status)
         record.status?.let { Text(stringResource(StatusPresentation.meaning(it)), style = MaterialTheme.typography.bodyMedium) }
         DecisionLine(record)
@@ -29,6 +33,7 @@ fun RecordSummary(record: AttendanceRecord, modifier: Modifier = Modifier) {
         if (events.isEmpty()) {
             Text(stringResource(R.string.activity_no_events), style = MaterialTheme.typography.bodyMedium)
         } else {
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             events.forEach { EventLine(it) }
         }
         CompletionMarker(record)
@@ -54,14 +59,21 @@ private fun DecisionLine(record: AttendanceRecord) {
 
 @Composable
 private fun EventLine(event: AttendanceEvent) {
-    Text(
-        stringResource(
-            R.string.event_at_format,
-            stringResource(StatusPresentation.eventLabel(event.action)),
-            TimeFormat.formatTime(event.receivedAt),
-        ) + " - " + stringResource(StatusPresentation.label(event.status)),
-        style = MaterialTheme.typography.bodyMedium,
-    )
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = MaterialTheme.shapes.small,
+    ) {
+        Text(
+            stringResource(
+                R.string.event_at_format,
+                stringResource(StatusPresentation.eventLabel(event.action)),
+                TimeFormat.formatTime(event.receivedAt),
+            ) + " - " + stringResource(StatusPresentation.label(event.status)),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(12.dp),
+        )
+    }
 }
 
 @Composable

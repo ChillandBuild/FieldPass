@@ -1,6 +1,6 @@
 package com.fieldpass.student.activities
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,6 +9,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -45,9 +48,10 @@ fun ActivitiesScreen(
             else -> LazyColumn(
                 Modifier.fillMaxSize(),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                item { Text(stringResource(R.string.activities_title), style = MaterialTheme.typography.headlineSmall) }
+                item { DayHeader(state.firstName, DaySummary.isOnTrack(state.activities), Modifier.padding(top = 8.dp, bottom = 8.dp)) }
+                item { Text(stringResource(R.string.activities_title), style = MaterialTheme.typography.titleMedium) }
                 val enrollment = state.enrollmentStatus
                 if (enrollment != null && enrollment != EnrollmentStatus.APPROVED) {
                     item {
@@ -71,19 +75,28 @@ fun ActivitiesScreen(
 
 @Composable
 private fun ActivityCard(activity: Activity, onClick: () -> Unit) {
-    Card(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(activity.name, style = MaterialTheme.typography.titleMedium)
             Text(stringResource(R.string.activity_venue_format, activity.venueName), style = MaterialTheme.typography.bodyMedium)
             Text(
                 stringResource(R.string.activity_schedule_format, TimeFormat.formatRange(activity.startsAt, activity.endsAt)),
                 style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Text(requiredText(), style = MaterialTheme.typography.bodySmall)
-            if (activity.openCheckpoint != null) {
-                Text(stringResource(R.string.activity_checkpoint_open_short), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             StatusChip(activity.myAttendance?.status)
+            if (activity.openCheckpoint != null) {
+                Surface(color = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer, shape = MaterialTheme.shapes.small) {
+                    Text(stringResource(R.string.activity_checkpoint_open_short), modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), style = MaterialTheme.typography.labelLarge)
+                }
+            }
+            Text(requiredText(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

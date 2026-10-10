@@ -18,6 +18,7 @@ data class ActivitiesUiState(
     val isRefreshing: Boolean = false,
     val activities: List<Activity> = emptyList(),
     val enrollmentStatus: EnrollmentStatus? = null,
+    val firstName: String? = null,
     val error: ErrorCode? = null,
 )
 
@@ -41,8 +42,16 @@ class ActivitiesViewModel(private val repository: FieldPassRepository) : ViewMod
                 } catch (_: Exception) {
                     null
                 }
+                // The greeting is cosmetic: if the name cannot be fetched, the header just omits it.
+                val firstName = _state.value.firstName ?: try {
+                    DaySummary.firstName(repository.currentUser()?.fullName)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    null
+                }
                 _state.update {
-                    it.copy(isLoading = false, isRefreshing = false, activities = activities, enrollmentStatus = enrollment)
+                    it.copy(isLoading = false, isRefreshing = false, activities = activities, enrollmentStatus = enrollment, firstName = firstName)
                 }
             } catch (e: CancellationException) {
                 throw e
