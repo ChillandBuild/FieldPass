@@ -1,4 +1,5 @@
-.enroll-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: var(--gap); }
-.enroll-photo { width: 100%; aspect-ratio: 4 / 5; max-height: 420px; object-fit: contain; background: var(--surface-alt); border-radius: var(--radius); display: grid; place-items: center; }
-.enroll-card h2 { margin-bottom: 2px; }
-.identity-note { background: var(--warn-bg); border: 1px solid #b58300; color: var(--warn-text); padding: 8px 10px; border-radius: var(--radius); font-size: 0.9rem; }
+.enroll-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: var(--gap); align-items: start; }
+.enroll-photo { width: 100%; aspect-ratio: 4 / 5; max-height: 360px; object-fit: contain; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 8px; display: grid; place-items: center; }
+.enroll-card h2 { margin-bottom: 6px; font-size: 1.25rem; }
+.enroll-card > div > .muted { font-size: 0.8rem; }
+.identity-note { background: var(--warn-bg); border-left: 3px solid #b58326; color: var(--warn-text); padding: 12px 14px; border-radius: 0 8px 8px 0; font-size: 0.85rem; }

@@ -55,40 +55,48 @@ export function LoginScreen() {
     <>
       <FixtureBanner />
       <div className="center-screen">
-        <div className="center-card stack">
-          <h1>FieldPass faculty sign in</h1>
-          {notFaculty ? (
-            <Notice kind="error">
-              This dashboard is for faculty. You have been signed out. Student accounts use the FieldPass Android app.
-            </Notice>
-          ) : null}
-          {submit.error ? <Notice kind="error">{submit.error}</Notice> : null}
-          <form className="card" onSubmit={onSubmit} noValidate>
-            <Field label="Username">
-              {(p) => <input id={p.id} value={username} autoComplete="username" autoCapitalize="none"
-                onChange={(e) => setUsername(e.target.value)} required />}
-            </Field>
-            <Field label="Password">
-              {(p) => <input id={p.id} type="password" value={password} autoComplete="current-password"
-                onChange={(e) => setPassword(e.target.value)} required />}
-            </Field>
-            <Field label="Server address" error={urlError}
-              hint={USE_FIXTURES ? 'Ignored in fixture mode.' : 'The laptop running the backend. It changes when the hotspot changes.'}>
-              {(p) => <input id={p.id} inputMode="url" value={serverUrl} aria-invalid={p.invalid}
-                aria-describedby={p.describedBy} onChange={(e) => setServerUrl(e.target.value)} />}
-            </Field>
-            <div className="btn-row">
+        <div className="login">
+          <div className="brand login-brand">
+            <span className="brand-mark" aria-hidden="true">F<span> /</span></span>
+            <span>FieldPass<span className="brand-role">Faculty</span></span>
+          </div>
+          <div className="login-card">
+            <h1 id="login-title" className="login-title">FieldPass faculty sign in</h1>
+            <p className="login-lede">Review who checked in and decide on each record.</p>
+            {notFaculty ? (
+              <Notice kind="error">
+                This dashboard is for faculty. You have been signed out. Student accounts use the FieldPass Android app.
+              </Notice>
+            ) : null}
+            {submit.error ? <Notice kind="error">{submit.error}</Notice> : null}
+            <form className="login-form" aria-labelledby="login-title" onSubmit={onSubmit} noValidate>
+              <Field label="Username">
+                {(p) => <input id={p.id} value={username} autoComplete="username" autoCapitalize="none"
+                  onChange={(e) => setUsername(e.target.value)} required />}
+              </Field>
+              <Field label="Password">
+                {(p) => <input id={p.id} type="password" value={password} autoComplete="current-password"
+                  onChange={(e) => setPassword(e.target.value)} required />}
+              </Field>
               <button type="submit" className="btn btn-primary" disabled={submit.isBusy || !username || !password}>
                 {submit.isBusy ? 'Signing in...' : 'Sign in'}
               </button>
-              <button type="button" className="btn" onClick={() => { void test.run() }} disabled={test.isBusy}>
-                {test.isBusy ? 'Testing...' : 'Test connection'}
-              </button>
-            </div>
-            {check ? <div style={{ marginTop: 12 }}><Notice kind={check.kind}>{check.text}</Notice></div> : null}
-          </form>
+              <div className="login-server" role="group" aria-labelledby="login-connection">
+                <h2 id="login-connection" className="login-section">Connection</h2>
+                <Field label="Server address" error={urlError}
+                  hint={USE_FIXTURES ? 'Ignored in fixture mode.' : 'The laptop running the backend. It changes when the hotspot changes.'}>
+                  {(p) => <input id={p.id} inputMode="url" value={serverUrl} aria-invalid={p.invalid}
+                    aria-describedby={p.describedBy} onChange={(e) => setServerUrl(e.target.value)} />}
+                </Field>
+                <button type="button" className="btn" onClick={() => { void test.run() }} disabled={test.isBusy}>
+                  {test.isBusy ? 'Testing...' : 'Test connection'}
+                </button>
+                {check ? <div className="login-check"><Notice kind={check.kind}>{check.text}</Notice></div> : null}
+              </div>
+            </form>
+          </div>
           {USE_FIXTURES ? (
-            <p className="muted">Fixture mode: sign in as faculty1 with any password. student1 shows the faculty-only message.</p>
+            <p className="login-foot muted">Fixture mode: sign in as faculty1 with any password. student1 shows the faculty-only message.</p>
           ) : null}
         </div>
       </div>
