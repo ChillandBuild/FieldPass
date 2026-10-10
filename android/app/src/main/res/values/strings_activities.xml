@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="activities_title">Your activities</string>
+    <string name="activities_empty">No activities are assigned to you yet. Pull down to refresh.</string>
+    <string name="activities_enrollment_notice">Your face photo is not approved yet, so you cannot check in. Open My photo to see where it stands.</string>
+    <string name="activities_open_photo">Open My photo</string>
+    <string name="activity_venue_format">Venue: %1$s</string>
+    <string name="activity_schedule_format">When: %1$s</string>
+    <string name="activity_required_with_checkpoints">Required: check in, checkpoints when faculty opens them, and check out.</string>
+    <string name="activity_checkpoint_open_format">A checkpoint is open until %1$s.</string>
+    <string name="activity_checkpoint_open_short">Checkpoint open</string>
+    <string name="activity_next_heading">What you can do now</string>
+    <string name="activity_no_actions">Nothing to do right now. Check the activity times, then pull down to refresh.</string>
+    <string name="activity_record_heading">Your record</string>
+    <string name="activity_no_events">Nothing recorded yet.</string>
+    <string name="activity_decision_format">%1$s by %2$s on %3$s</string>
+    <string name="activity_times_note">Recorded times are the moments you checked in. They do not show where you were in between.</string>
+</resources>

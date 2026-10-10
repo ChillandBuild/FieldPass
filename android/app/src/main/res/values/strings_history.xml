@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="history_title">Attendance history</string>
+    <string name="history_empty">No attendance records yet. Pull down to refresh.</string>
+</resources>

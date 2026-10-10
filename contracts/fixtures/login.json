@@ -1,0 +1,11 @@
+{
+  "access_token": "eyJhbGciOiJIUzI1NiJ9.example-access-token",
+  "token_type": "bearer",
+  "expires_at": "2026-10-10T17:00:00Z",
+  "user": {
+    "id": "u_s1",
+    "username": "student1",
+    "full_name": "Asha Verma",
+    "role": "student"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "outside_activity_window",
+    "message": "This activity is not open for that action right now."
+  }
+}

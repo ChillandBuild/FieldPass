@@ -1,0 +1,201 @@
+{
+  "activity": {
+    "id": "act_eed5085ed480",
+    "name": "Site Visit",
+    "venue_name": "Plant Gate 2",
+    "venue_lat": 12.9716,
+    "venue_lng": 77.5946,
+    "radius_m": 100,
+    "starts_at": "2026-10-10T09:35:00Z",
+    "ends_at": "2026-10-10T13:35:00Z",
+    "created_by": "Dr. Meera Rao",
+    "roster_count": 3,
+    "checkpoint_windows": [
+      {
+        "id": "cp_9e3b138b16c9",
+        "activity_id": "act_eed5085ed480",
+        "opens_at": "2026-10-10T09:44:00Z",
+        "closes_at": "2026-10-10T09:54:00Z",
+        "opened_by": "Dr. Meera Rao"
+      }
+    ],
+    "open_checkpoint": null,
+    "my_attendance": null
+  },
+  "server_time": "2026-10-10T14:10:00Z",
+  "rows": [
+    {
+      "activity_id": "act_eed5085ed480",
+      "activity_name": "Site Visit",
+      "student": {
+        "id": "u_s1",
+        "username": "student1",
+        "full_name": "Asha Verma",
+        "role": "student"
+      },
+      "status": "recorded",
+      "check_in": {
+        "id": "evt_e4ac94cb87bd",
+        "attempt_id": "att_d7a70b3530f2",
+        "activity_id": "act_eed5085ed480",
+        "student_id": "u_s1",
+        "action": "check_in",
+        "status": "recorded",
+        "received_at": "2026-10-10T09:34:00Z",
+        "checkpoint_id": null,
+        "review_reasons": [],
+        "location": {
+          "verdict": "inside",
+          "distance_m": 0,
+          "accuracy_m": 10,
+          "captured_at": "2026-10-10T09:33:55Z"
+        },
+        "face": {
+          "verdict": "match"
+        }
+      },
+      "checkpoints": [
+        {
+          "id": "evt_1ff33a4c5766",
+          "attempt_id": "att_b7d322c37b52",
+          "activity_id": "act_eed5085ed480",
+          "student_id": "u_s1",
+          "action": "checkpoint",
+          "status": "recorded",
+          "received_at": "2026-10-10T09:44:00Z",
+          "checkpoint_id": "cp_9e3b138b16c9",
+          "review_reasons": [],
+          "location": {
+            "verdict": "inside",
+            "distance_m": 0,
+            "accuracy_m": 10,
+            "captured_at": "2026-10-10T09:43:55Z"
+          },
+          "face": {
+            "verdict": "match"
+          }
+        }
+      ],
+      "check_out": {
+        "id": "evt_73cb6964f78e",
+        "attempt_id": "att_967eaaafdafb",
+        "activity_id": "act_eed5085ed480",
+        "student_id": "u_s1",
+        "action": "check_out",
+        "status": "recorded",
+        "received_at": "2026-10-10T12:00:00Z",
+        "checkpoint_id": null,
+        "review_reasons": [],
+        "location": {
+          "verdict": "inside",
+          "distance_m": 0,
+          "accuracy_m": 10,
+          "captured_at": "2026-10-10T11:59:55Z"
+        },
+        "face": {
+          "verdict": "match"
+        }
+      },
+      "missing_checkout": false,
+      "complete": true,
+      "review_reasons": [],
+      "decision": null,
+      "decision_history": [],
+      "observations": [],
+      "next_actions": []
+    },
+    {
+      "activity_id": "act_eed5085ed480",
+      "activity_name": "Site Visit",
+      "student": {
+        "id": "u_s2",
+        "username": "student2",
+        "full_name": "Rohan Iyer",
+        "role": "student"
+      },
+      "status": "confirmed",
+      "check_in": {
+        "id": "evt_b2afa8a3791f",
+        "attempt_id": "att_22e5e73d3ea5",
+        "activity_id": "act_eed5085ed480",
+        "student_id": "u_s2",
+        "action": "check_in",
+        "status": "needs_review",
+        "received_at": "2026-10-10T09:34:00Z",
+        "checkpoint_id": null,
+        "review_reasons": [
+          "location_uncertain",
+          "face_mismatch"
+        ],
+        "location": {
+          "verdict": "uncertain",
+          "distance_m": 105,
+          "accuracy_m": 10,
+          "captured_at": "2026-10-10T09:33:55Z"
+        },
+        "face": {
+          "verdict": "no_match"
+        }
+      },
+      "checkpoints": [],
+      "check_out": null,
+      "missing_checkout": true,
+      "complete": false,
+      "review_reasons": [
+        "location_uncertain",
+        "face_mismatch"
+      ],
+      "decision": {
+        "id": "dec_8ed6f983e575",
+        "decision": "confirmed",
+        "reason": "Seen on site all morning",
+        "actor_name": "Dr. Meera Rao",
+        "decided_at": "2026-10-10T09:45:00Z",
+        "is_current": true
+      },
+      "decision_history": [
+        {
+          "id": "dec_8ed6f983e575",
+          "decision": "confirmed",
+          "reason": "Seen on site all morning",
+          "actor_name": "Dr. Meera Rao",
+          "decided_at": "2026-10-10T09:45:00Z",
+          "is_current": true
+        }
+      ],
+      "observations": [
+        {
+          "id": "obs_17db20aeefad",
+          "activity_id": "act_eed5085ed480",
+          "student_id": "u_s2",
+          "observation_type": "present",
+          "note": "Signed the paper sheet",
+          "actor_name": "Dr. Meera Rao",
+          "observed_at": "2026-10-10T09:44:00Z"
+        }
+      ],
+      "next_actions": []
+    },
+    {
+      "activity_id": "act_eed5085ed480",
+      "activity_name": "Site Visit",
+      "student": {
+        "id": "u_s3",
+        "username": "student3",
+        "full_name": "Fatima Khan",
+        "role": "student"
+      },
+      "status": null,
+      "check_in": null,
+      "checkpoints": [],
+      "check_out": null,
+      "missing_checkout": false,
+      "complete": false,
+      "review_reasons": [],
+      "decision": null,
+      "decision_history": [],
+      "observations": [],
+      "next_actions": []
+    }
+  ]
+}

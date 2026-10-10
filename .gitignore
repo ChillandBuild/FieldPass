@@ -1,0 +1,35 @@
+# secrets and local data
+.env
+*.key
+*.db
+*.sqlite3
+backend/data/
+backend/models/*.onnx
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+
+# node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+android/.kotlin/
+*.apk
+*.keystore
+
+# misc
+.DS_Store
+test-results/
+playwright-report/

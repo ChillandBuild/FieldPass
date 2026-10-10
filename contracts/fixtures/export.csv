@@ -1,0 +1,4 @@
+student_id,username,full_name,status,check_in_at,check_in_status,checkpoints_answered,check_out_at,missing_checkout,complete,review_reasons,decision_reason,observations
+u_s1,student1,Asha Verma,recorded,2026-10-10T09:34:00Z,recorded,1,2026-10-10T12:00:00Z,false,true,,,
+u_s2,student2,Rohan Iyer,confirmed,2026-10-10T09:34:00Z,needs_review,0,,true,false,location_uncertain;face_mismatch,Seen on site all morning,present: Signed the paper sheet
+u_s3,student3,Fatima Khan,,,,0,,false,false,,,

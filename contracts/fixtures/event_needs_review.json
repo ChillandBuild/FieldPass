@@ -1,0 +1,23 @@
+{
+  "id": "evt_b2afa8a3791f",
+  "attempt_id": "att_22e5e73d3ea5",
+  "activity_id": "act_eed5085ed480",
+  "student_id": "u_s2",
+  "action": "check_in",
+  "status": "needs_review",
+  "received_at": "2026-10-10T09:34:00Z",
+  "checkpoint_id": null,
+  "review_reasons": [
+    "location_uncertain",
+    "face_mismatch"
+  ],
+  "location": {
+    "verdict": "uncertain",
+    "distance_m": 105,
+    "accuracy_m": 10,
+    "captured_at": "2026-10-10T09:33:55Z"
+  },
+  "face": {
+    "verdict": "no_match"
+  }
+}

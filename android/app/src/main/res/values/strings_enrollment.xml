@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="enrollment_title">My photo</string>
+    <string name="enrollment_intro">FieldPass compares your check-in photos with one approved photo of your face. Faculty must approve your photo before attendance checks can work.</string>
+    <string name="enrollment_none_heading">No photo yet</string>
+    <string name="enrollment_none_body">Take a clear photo of your face with the front camera. It is sent to the server for faculty to review.</string>
+    <string name="enrollment_pending_heading">Waiting for faculty approval</string>
+    <string name="enrollment_pending_body">Your photo was sent on %1$s. You can not check in until faculty approves it. Pull down to refresh.</string>
+    <string name="enrollment_approved_heading">Approved</string>
+    <string name="enrollment_approved_body">Approved by %1$s on %2$s. You can check in to your activities.</string>
+    <string name="enrollment_rejected_heading">Photo not approved</string>
+    <string name="enrollment_rejected_body">Faculty could not approve this photo. Please take a new one.</string>
+    <string name="enrollment_rejected_reason">Reason: %1$s</string>
+    <string name="enrollment_take_photo">Take my photo</string>
+    <string name="enrollment_take_new_photo">Take a new photo</string>
+    <string name="enrollment_replace_photo">Replace my photo</string>
+    <string name="enrollment_replace_title">Replace your photo?</string>
+    <string name="enrollment_replace_body">Approval does not carry over to a new photo. Until faculty approves the new one, you will not be able to check in.</string>
+    <string name="enrollment_replace_confirm">Replace</string>
+    <string name="enrollment_preview_heading">Check your photo</string>
+    <string name="enrollment_preview_body">Your whole face should be clear and well lit, and only you should be in the picture.</string>
+    <string name="enrollment_submit">Send for approval</string>
+    <string name="enrollment_submitting">Sending</string>
+    <string name="enrollment_camera_heading">Take your photo</string>
+</resources>

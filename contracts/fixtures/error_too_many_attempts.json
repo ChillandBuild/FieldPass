@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "too_many_attempts",
+    "message": "Too many sign-in tries. Wait a minute and retry."
+  }
+}

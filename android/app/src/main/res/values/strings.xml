@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FieldPass</string>
+    <string name="fixture_banner">FIXTURE MODE: sample data</string>
+    <string name="action_retry">Try again</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_close">Close</string>
+    <string name="action_sign_out">Sign out</string>
+    <string name="action_open_settings">Open app settings</string>
+    <string name="loading">Loading</string>
+    <string name="tab_activities">Activities</string>
+    <string name="tab_history">History</string>
+    <string name="tab_photo">My photo</string>
+
+    <!-- Attendance status meanings (exact contract wording) -->
+    <string name="status_none">No attendance recorded yet</string>
+    <string name="status_recorded">Recorded</string>
+    <string name="status_recorded_meaning">Automated checks passed. Faculty confirmation is pending.</string>
+    <string name="status_needs_review">Needs review</string>
+    <string name="status_needs_review_meaning">The evidence was uncertain or a check could not be completed, so faculty will review it. This is routine and is not a judgment about you.</string>
+    <string name="status_confirmed">Confirmed</string>
+    <string name="status_confirmed_meaning">Faculty approved your attendance.</string>
+    <string name="status_not_confirmed">Not confirmed</string>
+    <string name="status_not_confirmed_meaning">Faculty did not confirm this attendance.</string>
+    <string name="status_reason_format">Faculty note: %1$s</string>
+
+    <string name="reason_location_uncertain">Your location was too close to the edge of the area, or not precise enough, to be sure.</string>
+    <string name="reason_location_outside">Your location reading was outside the activity area. Phone location can be off by a lot indoors.</string>
+    <string name="reason_face_mismatch">The photo needs a person to compare it with your approved photo.</string>
+    <string name="reason_face_uncertain">The photo was not clear enough to check automatically.</string>
+    <string name="reasons_heading">Why faculty will look at this</string>
+
+    <string name="action_check_in">Check in</string>
+    <string name="action_checkpoint">Answer checkpoint</string>
+    <string name="action_check_out">Check out</string>
+    <string name="event_check_in">Checked in</string>
+    <string name="event_checkpoint">Checkpoint</string>
+    <string name="event_check_out">Checked out</string>
+    <string name="event_at_format">%1$s at %2$s</string>
+    <string name="marker_missing_checkout">Check-out missing</string>
+    <string name="marker_incomplete">Incomplete</string>
+    <string name="marker_complete">Check-in and check-out both recorded</string>
+</resources>

@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "location_stale",
+    "message": "Your location reading is too old. Try again."
+  }
+}

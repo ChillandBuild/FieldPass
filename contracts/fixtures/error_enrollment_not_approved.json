@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "enrollment_not_approved",
+    "message": "Your enrollment photo has not been approved yet."
+  }
+}

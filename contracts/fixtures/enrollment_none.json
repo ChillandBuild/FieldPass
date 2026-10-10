@@ -1,0 +1,14 @@
+{
+  "id": null,
+  "status": "none",
+  "student": {
+    "id": "u_s1",
+    "username": "student1",
+    "full_name": "Asha Verma",
+    "role": "student"
+  },
+  "submitted_at": null,
+  "decided_at": null,
+  "decided_by": null,
+  "decision_reason": null
+}

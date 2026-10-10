@@ -1,0 +1,12 @@
+fastapi==0.143.0
+uvicorn[standard]==0.54.0
+python-multipart==0.0.32
+argon2-cffi==25.1.0
+PyJWT==2.15.1
+cryptography==50.0.2
+opencv-python-headless==5.0.0.93
+numpy==2.4.6
+SQLAlchemy==2.1.4
+pydantic==2.14.0
+PyYAML==6.0.3
+pillow==12.3.0

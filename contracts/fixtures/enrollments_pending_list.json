@@ -1,0 +1,46 @@
+{
+  "items": [
+    {
+      "id": "enr_343c642d0b6f",
+      "status": "pending",
+      "student": {
+        "id": "u_s1",
+        "username": "student1",
+        "full_name": "Asha Verma",
+        "role": "student"
+      },
+      "submitted_at": "2026-10-10T09:00:00Z",
+      "decided_at": null,
+      "decided_by": null,
+      "decision_reason": null
+    },
+    {
+      "id": "enr_cb0af7b80b3e",
+      "status": "pending",
+      "student": {
+        "id": "u_s2",
+        "username": "student2",
+        "full_name": "Rohan Iyer",
+        "role": "student"
+      },
+      "submitted_at": "2026-10-10T09:00:00Z",
+      "decided_at": null,
+      "decided_by": null,
+      "decision_reason": null
+    },
+    {
+      "id": "enr_22f66b4dbe1b",
+      "status": "pending",
+      "student": {
+        "id": "u_s3",
+        "username": "student3",
+        "full_name": "Fatima Khan",
+        "role": "student"
+      },
+      "submitted_at": "2026-10-10T09:00:00Z",
+      "decided_at": null,
+      "decided_by": null,
+      "decision_reason": null
+    }
+  ]
+}

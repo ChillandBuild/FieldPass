@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_invalid_credentials">The username or password is not right. Check them and try again.</string>
+    <string name="error_session_expired">Your session has ended. Please sign in again.</string>
+    <string name="error_forbidden">This account is not allowed to do that.</string>
+    <string name="error_not_assigned">You are not on the list for this activity. Ask your faculty member to add you.</string>
+    <string name="error_not_found">We could not find that. Pull down to refresh and try again.</string>
+    <string name="error_enrollment_not_approved">Your face photo has not been approved yet. Faculty must approve it before you can check in.</string>
+    <string name="error_outside_window">This activity is not open for that action right now. Check the activity times.</string>
+    <string name="error_invalid_order">That step is not available yet, or you have already done it. Refresh the activity to see what is next.</string>
+    <string name="error_checkpoint_not_open">There is no open checkpoint right now, or you have already answered this one.</string>
+    <string name="error_already_decided">Faculty has already made a decision on this photo.</string>
+    <string name="error_attempt_expired">This attempt ran out of time. You can start again.</string>
+    <string name="error_image_too_large">The photo is too large to send. Take it again.</string>
+    <string name="error_validation">Something was missing from the request. Please try again.</string>
+    <string name="error_unusable_capture">We could not use that photo. Hold the phone at eye level, face the light, keep your face in the frame, and retake it.</string>
+    <string name="error_multiple_faces">More than one face was in the photo. Make sure only you are in the frame, then retake it.</string>
+    <string name="error_location_stale">Your location reading was too old. We are getting a fresh one.</string>
+    <string name="error_network">Cannot reach the server. Check your Wi-Fi or hotspot and the server address, then try again.</string>
+    <string name="error_timeout">The server took too long to answer. Your request may or may not have arrived. Try again.</string>
+    <string name="error_server">The server had a problem. Please try again in a moment.</string>
+    <string name="error_invalid_base_url">That server address does not look right. Use a form like http://192.168.43.10:8000</string>
+    <string name="error_faculty_account">This is a faculty account. Please use the faculty dashboard in a web browser. This app is for students.</string>
+    <string name="error_location_permission">Location permission is off. FieldPass reads your location only while you check in, answer a checkpoint or check out.</string>
+    <string name="error_location_off">Location services are turned off on this phone. Turn them on, then try again.</string>
+    <string name="error_location_timeout">We could not get a location reading in time. Move to an open area if you can, then try again.</string>
+    <string name="error_camera_permission">Camera permission is off. FieldPass uses the camera only to take your photo.</string>
+    <string name="error_capture_failed">The camera could not take a photo. Please try again.</string>
+    <string name="error_unknown">Something went wrong. Please try again.</string>
+</resources>

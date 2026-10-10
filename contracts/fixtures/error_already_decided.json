@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "already_decided",
+    "message": "This enrollment has already been decided."
+  }
+}

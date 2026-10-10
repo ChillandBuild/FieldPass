@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "unusable_capture",
+    "message": "We could not find a face in that photo. Try again."
+  }
+}

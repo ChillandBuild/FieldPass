@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "attempt_expired",
+    "message": "This attempt has expired. Start a new one."
+  }
+}

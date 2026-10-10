@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "checkpoint_not_open",
+    "message": "There is no open checkpoint for you to answer."
+  }
+}

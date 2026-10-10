@@ -1,0 +1,20 @@
+{
+  "id": "evt_e4ac94cb87bd",
+  "attempt_id": "att_d7a70b3530f2",
+  "activity_id": "act_eed5085ed480",
+  "student_id": "u_s1",
+  "action": "check_in",
+  "status": "recorded",
+  "received_at": "2026-10-10T09:34:00Z",
+  "checkpoint_id": null,
+  "review_reasons": [],
+  "location": {
+    "verdict": "inside",
+    "distance_m": 0,
+    "accuracy_m": 10,
+    "captured_at": "2026-10-10T09:33:55Z"
+  },
+  "face": {
+    "verdict": "match"
+  }
+}

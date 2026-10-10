@@ -1,0 +1,10 @@
+.venv/
+.env
+data/
+models/*.onnx
+models/*.part
+tests/samples/
+__pycache__/
+.pytest_cache/
+.coverage
+htmlcov/

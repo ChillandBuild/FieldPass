@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="permission_allow">Allow</string>
+    <string name="permission_camera_title">Camera access</string>
+    <string name="permission_camera_rationale">FieldPass needs the camera to take your photo. It uses only the front camera, only on this screen. Photos are never picked from your gallery.</string>
+    <string name="permission_camera_blocked">Camera access was turned off for FieldPass. Open app settings, choose Permissions, then Camera, and allow it.</string>
+    <string name="permission_location_title">Location access</string>
+    <string name="permission_location_rationale">FieldPass reads your location once, only while you check in, answer a checkpoint or check out, to compare it with the activity venue. It does not track you in the background.</string>
+    <string name="permission_location_blocked">Location access was turned off for FieldPass. Open app settings, choose Permissions, then Location, and allow it.</string>
+
+    <string name="camera_preview_description">Front camera preview</string>
+    <string name="camera_take_photo">Take photo</string>
+    <string name="camera_taking_photo">Taking photo</string>
+    <string name="photo_preview_description">The photo you just took</string>
+    <string name="photo_retake">Retake photo</string>
+    <string name="camera_tips">Hold the phone at eye level, face the light, and keep only your face in the frame.</string>
+</resources>

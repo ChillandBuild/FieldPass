@@ -1,0 +1,84 @@
+{
+  "items": [
+    {
+      "activity_id": "act_eed5085ed480",
+      "activity_name": "Site Visit",
+      "student": {
+        "id": "u_s1",
+        "username": "student1",
+        "full_name": "Asha Verma",
+        "role": "student"
+      },
+      "status": "recorded",
+      "check_in": {
+        "id": "evt_e4ac94cb87bd",
+        "attempt_id": "att_d7a70b3530f2",
+        "activity_id": "act_eed5085ed480",
+        "student_id": "u_s1",
+        "action": "check_in",
+        "status": "recorded",
+        "received_at": "2026-10-10T09:34:00Z",
+        "checkpoint_id": null,
+        "review_reasons": [],
+        "location": {
+          "verdict": "inside",
+          "distance_m": 0,
+          "accuracy_m": 10,
+          "captured_at": "2026-10-10T09:33:55Z"
+        },
+        "face": {
+          "verdict": "match"
+        }
+      },
+      "checkpoints": [
+        {
+          "id": "evt_1ff33a4c5766",
+          "attempt_id": "att_b7d322c37b52",
+          "activity_id": "act_eed5085ed480",
+          "student_id": "u_s1",
+          "action": "checkpoint",
+          "status": "recorded",
+          "received_at": "2026-10-10T09:44:00Z",
+          "checkpoint_id": "cp_9e3b138b16c9",
+          "review_reasons": [],
+          "location": {
+            "verdict": "inside",
+            "distance_m": 0,
+            "accuracy_m": 10,
+            "captured_at": "2026-10-10T09:43:55Z"
+          },
+          "face": {
+            "verdict": "match"
+          }
+        }
+      ],
+      "check_out": {
+        "id": "evt_73cb6964f78e",
+        "attempt_id": "att_967eaaafdafb",
+        "activity_id": "act_eed5085ed480",
+        "student_id": "u_s1",
+        "action": "check_out",
+        "status": "recorded",
+        "received_at": "2026-10-10T12:00:00Z",
+        "checkpoint_id": null,
+        "review_reasons": [],
+        "location": {
+          "verdict": "inside",
+          "distance_m": 0,
+          "accuracy_m": 10,
+          "captured_at": "2026-10-10T11:59:55Z"
+        },
+        "face": {
+          "verdict": "match"
+        }
+      },
+      "missing_checkout": false,
+      "complete": true,
+      "review_reasons": [],
+      "decision": null,
+      "decision_history": [],
+      "observations": [],
+      "next_actions": []
+    }
+  ]
+}

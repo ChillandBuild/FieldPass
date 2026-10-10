@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="attempt_title_check_in">Check in</string>
+    <string name="attempt_title_checkpoint">Answer checkpoint</string>
+    <string name="attempt_title_check_out">Check out</string>
+    <string name="attempt_countdown_format">Time left for this attempt: %1$s</string>
+    <string name="attempt_starting">Starting your attempt</string>
+    <string name="attempt_locating">Getting your current location. Stay where you are.</string>
+    <string name="attempt_location_failed_heading">We need a location reading</string>
+    <string name="attempt_open_location_settings">Open location settings</string>
+    <string name="attempt_poor_heading">Your location is not very precise</string>
+    <string name="attempt_poor_body">The phone says your location could be off by about this many metres: %1$d. Moving to an open area usually helps.</string>
+    <string name="attempt_poor_retry">Try again for a better fix</string>
+    <string name="attempt_poor_anyway">Submit anyway (may need faculty review)</string>
+    <string name="attempt_selfie_heading">Take a selfie</string>
+    <string name="attempt_selfie_body">Location ready. Now take a clear photo of your face.</string>
+    <string name="attempt_ready_heading">Ready to send</string>
+    <string name="attempt_send">Send</string>
+    <string name="attempt_sending">Sending</string>
+    <string name="attempt_send_again">Send again</string>
+    <string name="attempt_replay_note">We are not sure the last message arrived. Sending again is safe: it will not create a second record.</string>
+    <string name="attempt_done_heading">The server has recorded your attempt</string>
+    <string name="attempt_done_note">This is the server\'s result. Faculty makes the final decision.</string>
+    <string name="attempt_done_button">Done</string>
+    <string name="attempt_expired_heading">This attempt timed out</string>
+    <string name="attempt_expired_body">Attempts last about a minute and a half. Nothing was recorded. You can start again.</string>
+    <string name="attempt_start_again">Start again</string>
+    <string name="attempt_failed_heading">We could not continue</string>
+</resources>

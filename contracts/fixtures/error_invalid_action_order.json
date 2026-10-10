@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "invalid_action_order",
+    "message": "Attendance for this activity is already finished."
+  }
+}

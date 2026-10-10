@@ -1,0 +1,21 @@
+{
+  "invalid_credentials": 401,
+  "not_authenticated": 401,
+  "forbidden": 403,
+  "not_found": 404,
+  "validation_error": 422,
+  "unusable_capture": 422,
+  "multiple_faces": 422,
+  "image_too_large": 413,
+  "already_decided": 409,
+  "enrollment_not_approved": 409,
+  "invalid_action_order": 409,
+  "checkpoint_not_open": 409,
+  "not_assigned": 403,
+  "outside_activity_window": 409,
+  "location_stale": 422,
+  "attempt_expired": 410,
+  "too_many_attempts": 429,
+  "method_not_allowed": 405,
+  "server_error": 500
+}

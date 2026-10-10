@@ -1,0 +1,72 @@
+{
+  "activity_id": "act_eed5085ed480",
+  "activity_name": "Site Visit",
+  "student": {
+    "id": "u_s2",
+    "username": "student2",
+    "full_name": "Rohan Iyer",
+    "role": "student"
+  },
+  "status": "confirmed",
+  "check_in": {
+    "id": "evt_b2afa8a3791f",
+    "attempt_id": "att_22e5e73d3ea5",
+    "activity_id": "act_eed5085ed480",
+    "student_id": "u_s2",
+    "action": "check_in",
+    "status": "needs_review",
+    "received_at": "2026-10-10T09:34:00Z",
+    "checkpoint_id": null,
+    "review_reasons": [
+      "location_uncertain",
+      "face_mismatch"
+    ],
+    "location": {
+      "verdict": "uncertain",
+      "distance_m": 105,
+      "accuracy_m": 10,
+      "captured_at": "2026-10-10T09:33:55Z"
+    },
+    "face": {
+      "verdict": "no_match"
+    }
+  },
+  "checkpoints": [],
+  "check_out": null,
+  "missing_checkout": false,
+  "complete": false,
+  "review_reasons": [
+    "location_uncertain",
+    "face_mismatch"
+  ],
+  "decision": {
+    "id": "dec_8ed6f983e575",
+    "decision": "confirmed",
+    "reason": "Seen on site all morning",
+    "actor_name": "Dr. Meera Rao",
+    "decided_at": "2026-10-10T09:45:00Z",
+    "is_current": true
+  },
+  "decision_history": [
+    {
+      "id": "dec_8ed6f983e575",
+      "decision": "confirmed",
+      "reason": "Seen on site all morning",
+      "actor_name": "Dr. Meera Rao",
+      "decided_at": "2026-10-10T09:45:00Z",
+      "is_current": true
+    }
+  ],
+  "observations": [
+    {
+      "id": "obs_17db20aeefad",
+      "activity_id": "act_eed5085ed480",
+      "student_id": "u_s2",
+      "observation_type": "present",
+      "note": "Signed the paper sheet",
+      "actor_name": "Dr. Meera Rao",
+      "observed_at": "2026-10-10T09:44:00Z"
+    }
+  ],
+  "next_actions": []
+}

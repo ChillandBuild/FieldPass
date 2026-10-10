@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "image_too_large",
+    "message": "The photo is larger than 5 MB."
+  }
+}

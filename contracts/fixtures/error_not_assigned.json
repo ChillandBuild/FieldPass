@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "not_assigned",
+    "message": "You are not on the roster for this activity."
+  }
+}

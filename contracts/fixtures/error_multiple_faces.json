@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "multiple_faces",
+    "message": "More than one face was found. Only you should be in the photo."
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "items": [
+    {
+      "id": "act_eed5085ed480",
+      "name": "Site Visit",
+      "venue_name": "Plant Gate 2",
+      "venue_lat": 12.9716,
+      "venue_lng": 77.5946,
+      "radius_m": 100,
+      "starts_at": "2026-10-10T09:35:00Z",
+      "ends_at": "2026-10-10T13:35:00Z",
+      "created_by": "Dr. Meera Rao",
+      "roster_count": 3,
+      "checkpoint_windows": [],
+      "open_checkpoint": null,
+      "my_attendance": null
+    }
+  ]
+}
