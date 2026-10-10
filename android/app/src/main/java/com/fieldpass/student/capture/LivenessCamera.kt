@@ -62,6 +62,7 @@ private class LivenessSession {
     var faceVisible by mutableStateOf(true)
     var capturing by mutableStateOf(false)
     var front: ByteArray? = null
+    var disposed = false
 
     fun dropFront() {
         front?.fill(0)
@@ -101,6 +102,10 @@ fun LivenessCamera(
     val previewDescription = stringResource(R.string.camera_preview_description)
 
     fun onShot(shot: LivenessShot, jpeg: ByteArray) {
+        if (session.disposed) {
+            jpeg.fill(0)
+            return
+        }
         session.capturing = false
         if (shot == LivenessShot.FRONT) {
             session.front = jpeg
@@ -108,11 +113,17 @@ fun LivenessCamera(
         }
         val front = session.front
         session.front = null // handed to the caller, who now owns and wipes it
-        if (front == null) currentOnFailed(ErrorCode.CAPTURE_FAILED) else currentOnCaptured(front, jpeg)
+        if (front == null) {
+            // The guide is already DONE and would never restart by itself: begin again from step 1.
+            session.startAgain()
+            currentOnFailed(ErrorCode.CAPTURE_FAILED)
+        } else {
+            currentOnCaptured(front, jpeg)
+        }
     }
 
     fun onReading(reading: FaceReading) {
-        if (session.capturing) return
+        if (session.disposed || session.capturing) return
         session.faceVisible = reading.faces == 1
         val before = session.guide.step
         val update = LivenessGuide.next(session.guide, reading, currentChallenge)
@@ -139,6 +150,7 @@ fun LivenessCamera(
     DisposableEffect(lifecycleOwner) {
         analysis.setAnalyzer(ContextCompat.getMainExecutor(context)) { proxy -> detector.read(proxy) { onReading(it) } }
         onDispose {
+            session.disposed = true
             analysis.clearAnalyzer()
             detector.close()
             session.dropFront()
@@ -168,7 +180,7 @@ fun LivenessCamera(
                         } catch (_: Exception) {
                             // Some old phones cannot run preview + photo + analysis together: the one-photo path still works.
                             stuck = true
-                            onCaptureFailed(ErrorCode.CAPTURE_FAILED)
+                            currentOnFailed(ErrorCode.CAPTURE_FAILED)
                         }
                     }, ContextCompat.getMainExecutor(ctx))
                 }
@@ -207,8 +219,14 @@ private fun FaceDetector.read(proxy: ImageProxy, onReading: (FaceReading) -> Uni
         proxy.close()
         return
     }
-    process(InputImage.fromMediaImage(media, proxy.imageInfo.rotationDegrees))
-        .addOnSuccessListener { faces -> onReading(faces.toReading()) }
+    val task = try {
+        process(InputImage.fromMediaImage(media, proxy.imageInfo.rotationDegrees))
+    } catch (e: Exception) {
+        proxy.close()
+        onReading(FaceReading(faces = 0))
+        return
+    }
+    task.addOnSuccessListener { faces -> onReading(faces.toReading()) }
         .addOnFailureListener { onReading(FaceReading(faces = 0)) }
         .addOnCompleteListener { proxy.close() }
 }
@@ -223,9 +241,17 @@ private fun ImageCapture.takeJpeg(context: Context, scope: CoroutineScope, onFai
         ContextCompat.getMainExecutor(context),
         object : ImageCapture.OnImageCapturedCallback() {
             override fun onCaptureSuccess(image: ImageProxy) {
-                val raw = ByteArray(image.planes[0].buffer.remaining()).also { image.planes[0].buffer.get(it) }
-                val rotation = image.imageInfo.rotationDegrees
-                image.close()
+                val raw: ByteArray
+                val rotation: Int
+                try {
+                    raw = ByteArray(image.planes[0].buffer.remaining()).also { image.planes[0].buffer.get(it) }
+                    rotation = image.imageInfo.rotationDegrees
+                } catch (e: Exception) {
+                    onFailed()
+                    return
+                } finally {
+                    image.close()
+                }
                 scope.launch {
                     runCatching { withContext(Dispatchers.Default) { JpegProcessor.process(raw, rotation) } }
                         .onSuccess(onJpeg)
