@@ -15,6 +15,7 @@ export type ApiErrorCode =
   | 'unusable_capture'
   | 'multiple_faces'
   | 'location_stale'
+  | 'device_key_required'
   // Client-side codes (not in the contract): no response / unexpected response.
   | 'network_error'
   | 'unknown_error'
@@ -52,6 +53,7 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   unusable_capture: 'The image could not be used.',
   multiple_faces: 'More than one face was found in the image.',
   location_stale: 'The location reading is too old.',
+  device_key_required: 'Student accounts sign in on the FieldPass Android app.',
   network_error: 'Could not reach the server. Check the server address and your network.',
   unknown_error: 'Something unexpected went wrong. Please try again.',
 }

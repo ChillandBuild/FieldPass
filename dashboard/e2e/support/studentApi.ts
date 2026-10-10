@@ -1,6 +1,9 @@
-import { readFileSync } from 'node:fs'
+import { createPrivateKey, createPublicKey, generateKeyPairSync, sign, type KeyObject } from 'node:crypto'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { BACKEND_URL, passwordFor } from './backend'
+import { canonicalMessage } from './canonical'
 
 const SAMPLES = path.resolve(import.meta.dirname, '../../../backend/tests/samples')
 
@@ -17,6 +20,8 @@ export const VENUE = { lat: 12.9716, lng: 77.5946 }
 export interface Attempt {
   id: string
   action: string
+  nonce: string
+  challenge: 'left' | 'right'
   created_at: string
   expires_at: string
 }
@@ -36,13 +41,40 @@ export interface AttendanceEventBody {
   location: { verdict: string }
 }
 
-function sample(name: Sample): Blob {
-  return new Blob([readFileSync(path.join(SAMPLES, `${name}.jpg`))], { type: 'image/jpeg' })
+function sampleBytes(name: Sample): Buffer {
+  return readFileSync(path.join(SAMPLES, `${name}.jpg`))
 }
+
+const jpeg = (bytes: Buffer): Blob => new Blob([new Uint8Array(bytes)], { type: 'image/jpeg' })
+
+/**
+ * One phone key per student per backend. Kept in a temp file so a restarted Playwright worker sends the same
+ * key (a new key would be refused with device_mismatch). Each run's backend is freshly seeded, so a key left
+ * over from an earlier run simply binds on first login.
+ */
+function deviceKeys(backendUrl: string): (username: string) => KeyObject {
+  const file = path.join(tmpdir(), `fieldpass-e2e-keys-${new URL(backendUrl).port}.json`)
+  let pems: Record<string, string> = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : {}
+  return (username) => {
+    if (!pems[username]) {
+      const { privateKey } = generateKeyPairSync('ec', { namedCurve: 'prime256v1' })
+      pems = { ...pems, [username]: privateKey.export({ type: 'pkcs8', format: 'pem' }).toString() }
+      writeFileSync(file, JSON.stringify(pems))
+    }
+    return createPrivateKey(pems[username] as string)
+  }
+}
+
+const publicKeyB64 = (key: KeyObject): string =>
+  createPublicKey(key).export({ type: 'spki', format: 'der' }).toString('base64')
 
 /** The student/faculty API as called from a script, bound to one backend's base URL. */
 export function createStudentApi(backendUrl: string) {
   const root = `${backendUrl}/api/v1`
+  const keyFor = deviceKeys(backendUrl)
+  const owners = new Map<string, string>() // token -> username
+  const nonces = new Map<string, string>() // attempt id -> nonce
+  let submits = 0
 
   async function call<T>(method: string, route: string, token: string | null, body?: BodyInit, json?: unknown): Promise<ApiResult<T>> {
     const headers: Record<string, string> = {}
@@ -69,14 +101,17 @@ export function createStudentApi(backendUrl: string) {
   }
 
   async function login(username: string): Promise<string> {
-    const res = await api.post<{ access_token: string }>('/auth/login', null, { username, password: passwordFor(username) })
+    const res = await api.post<{ access_token: string }>('/auth/login', null, {
+      username, password: passwordFor(username), device_public_key: publicKeyB64(keyFor(username)),
+    })
     if (res.status !== 200) throw new Error(`login ${username} failed: ${res.status}`)
+    owners.set(res.body.access_token, username)
     return res.body.access_token
   }
 
   async function enroll(token: string, photo: Sample): Promise<ApiResult<{ id: string; status: string }>> {
     const form = new FormData()
-    form.append('photo', sample(photo), `${photo}.jpg`)
+    form.append('photo', jpeg(sampleBytes(photo)), `${photo}.jpg`)
     return call('POST', '/enrollment', token, form)
   }
 
@@ -86,17 +121,39 @@ export function createStudentApi(backendUrl: string) {
   }
 
   async function createAttempt(token: string, activityId: string, action: string): Promise<ApiResult<Attempt>> {
-    return api.post<Attempt>(`/activities/${activityId}/attempts`, token, { action })
+    const res = await api.post<Attempt>(`/activities/${activityId}/attempts`, token, { action })
+    if (res.status === 201) nonces.set(res.body.id, res.body.nonce)
+    return res
   }
 
-  /** Submits a selfie and location for an attempt. Safe to call again with the same attempt id. */
+  /**
+   * Submits a selfie and location for an attempt, signed like the phone. Safe to call again with the same id.
+   * The selfie doubles as the head-turn photo (the e2e backend runs with wide head-turn limits).
+   * Each default location is nudged by 0.000001° (~0.1 m) so check-in and check-out are not flagged as repeated.
+   */
   async function submitAttempt(token: string, attemptId: string, opts: SubmitOptions): Promise<ApiResult<AttendanceEventBody>> {
+    submits += 1
+    const selfie = sampleBytes(opts.photo)
+    const lat = opts.lat ?? VENUE.lat + submits * 0.000001
+    const lng = opts.lng ?? VENUE.lng
+    const accuracyM = opts.accuracyM ?? 15
+    const capturedEpoch = Math.floor(Date.now() / 1000)
+    const owner = owners.get(token)
+    const message = canonicalMessage({
+      attemptId, nonce: nonces.get(attemptId) ?? '', selfie, turn: selfie, lat, lng, accuracyM, capturedEpoch,
+      isMock: false, rooted: false, emulator: false,
+    })
     const form = new FormData()
-    form.append('selfie', sample(opts.photo), 'selfie.jpg')
-    form.append('lat', String(opts.lat ?? VENUE.lat))
-    form.append('lng', String(opts.lng ?? VENUE.lng))
-    form.append('accuracy_m', String(opts.accuracyM ?? 15))
-    form.append('location_captured_at', new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'))
+    form.append('selfie', jpeg(selfie), 'selfie.jpg')
+    form.append('turn_photo', jpeg(selfie), 'turn.jpg')
+    form.append('lat', lat.toFixed(6))
+    form.append('lng', lng.toFixed(6))
+    form.append('accuracy_m', accuracyM.toFixed(1))
+    form.append('location_captured_at', new Date(capturedEpoch * 1000).toISOString().replace(/\.\d{3}Z$/, 'Z'))
+    form.append('location_is_mock', 'false')
+    form.append('device_rooted', 'false')
+    form.append('device_emulator', 'false')
+    form.append('signature', owner ? sign('sha256', message, keyFor(owner)).toString('base64') : 'AAAA')
     return call('POST', `/attempts/${attemptId}/submit`, token, form)
   }
 

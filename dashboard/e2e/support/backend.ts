@@ -9,7 +9,7 @@ export const BACKEND_URL = `http://127.0.0.1:${BACKEND_PORT}`
 export const DASHBOARD_ORIGIN = `http://127.0.0.1:${DASHBOARD_PORT}`
 
 const BACKEND_DIR = path.resolve(import.meta.dirname, '../../../backend')
-const PYTHON = path.join(BACKEND_DIR, '.venv/bin/python')
+const PYTHON = path.join(BACKEND_DIR, process.platform === 'win32' ? '.venv/Scripts/python.exe' : '.venv/bin/python')
 const STATE_FILE = path.join(tmpdir(), 'fieldpass-e2e-state.json')
 const SHORT_STATE_FILE = path.join(tmpdir(), 'fieldpass-e2e-short-state.json')
 
@@ -82,6 +82,15 @@ async function launchBackend({ port, stateFile, settings }: LaunchOptions): Prom
     DATABASE_PATH: path.join(tempDir, 'e2e.db'),
     PHOTO_DIR: path.join(tempDir, 'photos'),
     CORS_ORIGINS: DASHBOARD_ORIGIN,
+    // Never reach a real database or storage bucket from backend/.env: these must be blank so the backend
+    // uses the throwaway SQLite file and local photo folder above.
+    DATABASE_URL: '',
+    SUPABASE_URL: '',
+    SUPABASE_SERVICE_KEY: '',
+    // There are no turned-head sample photos, so the e2e sends the selfie twice and the turn rule is opened
+    // wide. backend/tests/test_liveness.py proves the rule itself.
+    LIVENESS_FRONT_MAX_OFFSET: '9',
+    LIVENESS_TURN_MIN_OFFSET: '-9',
     ...settings,
   }
   const seed = spawnSync(PYTHON, ['-m', 'app.seed'], { cwd: BACKEND_DIR, env, encoding: 'utf-8' })

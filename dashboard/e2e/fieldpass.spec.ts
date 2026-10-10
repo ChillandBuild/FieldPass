@@ -50,7 +50,7 @@ test('1. faculty logs in through the UI; a student account is refused', async ({
   const studentPage = await browser.newPage()
   await signIn(studentPage, 'student1')
   await expect(studentPage.getByText('This dashboard is for faculty')).toBeVisible()
-  await expect(studentPage.getByRole('heading', { name: 'FieldPass faculty sign in' })).toBeVisible()
+  await expect(studentPage.getByRole('heading', { name: 'Welcome back.' })).toBeVisible()
   expect(await studentPage.evaluate(() => sessionStorage.getItem('fieldpass.token'))).toBeNull()
   await studentPage.close()
 
