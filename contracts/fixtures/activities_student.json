@@ -1,7 +1,7 @@
 {
   "items": [
     {
-      "id": "act_8b5be8c749c0",
+      "id": "act_4dd8c4544aeb",
       "name": "Site Visit",
       "venue_name": "Plant Gate 2",
       "venue_lat": 12.9716,
@@ -21,7 +21,7 @@
       "checkpoint_windows": [],
       "open_checkpoint": null,
       "my_attendance": {
-        "activity_id": "act_8b5be8c749c0",
+        "activity_id": "act_4dd8c4544aeb",
         "activity_name": "Site Visit",
         "student": {
           "id": "u_s1",

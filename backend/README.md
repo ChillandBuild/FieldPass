@@ -23,6 +23,10 @@ cp .env.example .env
 .venv/bin/python -m app.seed --demo-activity --lat 12.9716 --lng 77.5946
 ```
 
+After pulling the anti-cheat changes, recreate an older demo database (new columns are not added in place):
+delete `data/fieldpass.db` (or drop the Postgres schema) and run the seed commands again. To keep the data instead, run
+the `ALTER TABLE` statements in the "Upgrading an existing database" note of `contracts/API.md`.
+
 The server refuses to start (with a clear message) if a secret is missing or invalid (short
 `JWT_SECRET`, malformed `PHOTO_ENCRYPTION_KEY`) or the models are not downloaded. Seeding stops if
 `FACULTY_SEED_PASSWORD` is missing or equal to `SEED_PASSWORD`. `.env`, `data/` and `models/*.onnx` are git-ignored. Losing `PHOTO_ENCRYPTION_KEY`

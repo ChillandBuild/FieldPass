@@ -260,6 +260,10 @@ mention. Where it differs from the text above, this addendum describes what the 
 | 429 | `too_many_attempts` | `POST /auth/login` is rate limited: 10 tries per minute per username and client address, 30 per minute per client address (sliding 60 s window, held in memory) |
 | 405 | `method_not_allowed` | A known path called with the wrong HTTP method |
 | 500 | `server_error` | Any unhandled error. The message is generic |
+| 422 | `device_key_required` | Student login without `device_public_key` |
+| 403 | `device_mismatch` | Student login or submit from a phone other than the bound one |
+| 403 | `device_taken` | The phone's key is already bound to another student |
+| 403 | `bad_signature` | Submit signature does not verify against the bound phone's key |
 
 - `413 image_too_large` is returned for any oversized request body, not only photos. A multipart upload body over
   6 MB is refused before it is read. Any other body (JSON) over 64 KB is refused the same way. A photo over 5 MB
@@ -324,3 +328,106 @@ Location checks select the circle with the smallest `distance - radius`. The acc
 is inside if any circle fully contains the location uncertainty; outside if all circles are outside;
 otherwise uncertain. Reported distance is to the selected circle's centre. Old activities remain
 valid without region rows. New rows live in the `venue_regions` table; no existing columns are changed.
+
+### Phone lock, head turn and phone flags
+
+These rules stop a student checking in from someone else's phone, with a photo of a photo, or with fake GPS.
+They do not change the `v1` paths.
+
+**Phone lock.** `POST /auth/login` takes an extra field `device_public_key` (string, at most 512 characters):
+Base64 of the DER `SubjectPublicKeyInfo` of an EC P-256 key held in the phone's Android Keystore.
+
+- Student login without it: `422 device_key_required`. Faculty logins ignore it.
+- First student login binds the key to the student. Later logins must send the same key, otherwise
+  `403 device_mismatch`. A key already bound to another student: `403 device_taken`.
+- `GET /students` items gain `device_bound_at` (ISO time, or `null` when no phone is bound).
+- New: `POST /students/{student_id}/device/reset` (faculty, no body) removes the binding and returns the student
+  with `device_bound_at: null`. The student's next login binds whichever phone they use. `404 not_found` if the id
+  is not a student.
+
+**Attempts.** `Attempt` gains `nonce` (random string, single use) and `challenge` (`"left"` or `"right"`: the way
+the student must turn their head, from the student's own point of view).
+
+**Submit.** `POST /attempts/{id}/submit` multipart gains five required parts:
+
+| part | type | meaning |
+|---|---|---|
+| `turn_photo` | JPEG file | second photo, head turned the way `challenge` says; checked, never stored |
+| `location_is_mock` | `true`/`false` | Android reported the location as coming from a mock provider |
+| `device_rooted` | `true`/`false` | the phone shows signs of being rooted |
+| `device_emulator` | `true`/`false` | the app is running on an emulator |
+| `signature` | string | Base64 DER ECDSA-SHA256 signature by the bound key over the message below |
+
+The three flag parts are sent in the form as the literal strings `true` or `false`. Inside the signed message
+they are written as `1` or `0` instead (the client formats flags as `1|0` in the message and `true|false` in the form).
+
+The signed message is these 12 lines joined by `\n` (no trailing newline), UTF-8:
+
+```
+fieldpass-attempt-v1
+<attempt id>
+<nonce>
+<lowercase hex SHA-256 of the selfie bytes>
+<lowercase hex SHA-256 of the turn photo bytes>
+<lat, 6 decimals, "." separator>
+<lng, 6 decimals>
+<accuracy_m, 1 decimal>
+<location_captured_at as whole Unix seconds>
+<1 or 0: location_is_mock>
+<1 or 0: device_rooted>
+<1 or 0: device_emulator>
+```
+
+Send `lat`, `lng` and `accuracy_m` in the form exactly as they appear in the message. Example: attempt `att_1`,
+nonce `n0nce`, selfie bytes `A`, turn bytes `B`, 12.9716, 77.5946, accuracy 10, captured
+`2026-10-10T09:31:05Z`, not mock, rooted, not emulator →
+
+```
+fieldpass-attempt-v1
+att_1
+n0nce
+559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd
+df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c
+12.971600
+77.594600
+10.0
+1791624665
+0
+1
+0
+```
+
+- No phone bound for the student (reset after the attempt was created): `403 device_mismatch`.
+  Signature does not verify: `403 bad_signature`. Both are checked before `location_stale`.
+- Submitting an attempt that already has an event returns that event without checking the new signature
+  (a phone that lost the response can safely retry).
+
+**Review reasons.** `ReviewReason` gains five values. A red flag never blocks the event; it makes it `needs_review`.
+
+| reason | when |
+|---|---|
+| `liveness_failed` | the turn photo has no single face, is not the same person as the selfie, or is not turned the way `challenge` asked (or the selfie itself was not straight) |
+| `location_mocked` | `location_is_mock` was `true` |
+| `location_repeated` | the exact same lat/lng (6 decimals) as an earlier event of this student in this activity. Only a hash of the coordinates is kept |
+| `device_rooted` | `device_rooted` was `true` |
+| `device_emulator` | `device_emulator` was `true` |
+
+Order inside `review_reasons`: location verdict, face, `liveness_failed`, `location_mocked`, `location_repeated`,
+`device_rooted`, `device_emulator`.
+
+**Upgrading an existing database (required before deploying).** This version adds three columns:
+`attempts.nonce`, `attempts.challenge` and `attendance_events.location_fingerprint`. The server runs
+`create_all` at startup, which creates missing tables but does NOT add missing columns to existing tables.
+An existing Render/Supabase (or SQLite) database must therefore be fixed before the new code runs, either by
+a schema reset (delete the SQLite file at `DATABASE_PATH`, or drop the Postgres schema `DATABASE_SCHEMA`, then run
+the seed commands again) or by adding the columns in place. Postgres (schema `fieldpass`; adjust to your
+`DATABASE_SCHEMA`):
+
+```sql
+ALTER TABLE fieldpass.attempts ADD COLUMN nonce VARCHAR NOT NULL DEFAULT '';
+ALTER TABLE fieldpass.attempts ADD COLUMN challenge VARCHAR NOT NULL DEFAULT 'left';
+ALTER TABLE fieldpass.attendance_events ADD COLUMN location_fingerprint VARCHAR NULL;
+```
+
+SQLite uses the same statements without the `fieldpass.` prefix. The `student_devices` table is new and is
+created automatically. Old attempts get an empty nonce and can no longer be submitted (they have expired anyway).

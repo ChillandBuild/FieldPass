@@ -92,7 +92,7 @@ def flow_fixtures(api: Api) -> dict:
     attempt = api.attempt("student1", aid, "check_in").json()
     keep("event_recorded", api.submit("student1", attempt["id"], face("asha")), 200)
     second = api.attempt("student2", aid, "check_in").json()
-    keep("event_needs_review", api.submit("student2", second["id"], face("not-rohan"), lat=offset_lat(105)), 200)
+    keep("event_needs_review", api.submit("student2", second["id"], face("rohan~"), lat=offset_lat(105)), 200)
     return activity
 
 
@@ -124,6 +124,16 @@ def error_fixtures(api: Api, client: TestClient, app, aid: str) -> None:
     keep_error("multiple_faces", api.post("student1", "/enrollment", files={"photo": ("p.jpg", TWO_FACES, "image/jpeg")}), 422)
     keep_error("image_too_large", api.post("student1", "/enrollment", files={"photo": ("p.jpg", b"FACE:" + b"x" * 5_300_000, "image/jpeg")}), 413)
     keep_error("already_decided", api.post("faculty1", f"/enrollments/{api.enrollment_ids['student1']}/approve", json={"identity_confirmed": True}), 409)
+    keep_error("device_key_required", client.post(f"{P}/auth/login", json={
+        "username": "student2", "password": SEED_PASSWORD}), 422)
+    keep_error("device_mismatch", client.post(f"{P}/auth/login", json={
+        "username": "student2", "password": SEED_PASSWORD, "device_public_key": new_device_key()[1]}), 403)
+    keep("students", api.get("faculty1", "/students"), 200)
+    keep("student_device_reset", api.post("faculty1", "/students/u_s2/device/reset"), 200)
+    keep_error("device_taken", client.post(f"{P}/auth/login", json={
+        "username": "student2", "password": SEED_PASSWORD, "device_public_key": api.keys["student1"][1]}), 403)
+    client.post(f"{P}/auth/login", json={  # bind student2's own phone again
+        "username": "student2", "password": SEED_PASSWORD, "device_public_key": api.keys["student2"][1]})
     keep_error("enrollment_not_approved", api.attempt("student3", aid, "check_in"), 409)
     keep_error("invalid_action_order", api.attempt("student1", aid, "check_in"), 409)
     keep_error("checkpoint_not_open", api.attempt("student2", aid, "checkpoint"), 409)
@@ -133,6 +143,7 @@ def error_fixtures(api: Api, client: TestClient, app, aid: str) -> None:
     clock_.set_time(9, 31)  # rewind: fresh attempts for the retryable errors
     api.enroll("student3", "fatima2")
     fresh = api.attempt("student3", aid, "check_in").json()
+    keep_error("bad_signature", api.submit("student3", fresh["id"], face("fatima2"), signature="AAAA"), 403)
     keep_error("location_stale", api.submit("student3", fresh["id"], face("fatima2"), captured_ago_s=120), 422)
     clock_.advance(seconds=100)
     keep_error("attempt_expired", api.submit("student3", fresh["id"], face("fatima2")), 410)

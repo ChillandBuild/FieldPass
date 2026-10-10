@@ -1,6 +1,6 @@
 {
   "activity": {
-    "id": "act_8b5be8c749c0",
+    "id": "act_4dd8c4544aeb",
     "name": "Site Visit",
     "venue_name": "Plant Gate 2",
     "venue_lat": 12.9716,
@@ -19,8 +19,8 @@
     "roster_count": 3,
     "checkpoint_windows": [
       {
-        "id": "cp_79444dc461a1",
-        "activity_id": "act_8b5be8c749c0",
+        "id": "cp_a8cdf91b6f14",
+        "activity_id": "act_4dd8c4544aeb",
         "opens_at": "2026-10-10T09:44:00Z",
         "closes_at": "2026-10-10T09:54:00Z",
         "opened_by": "Dr. Meera Rao"
@@ -32,7 +32,7 @@
   "server_time": "2026-10-10T14:10:00Z",
   "rows": [
     {
-      "activity_id": "act_8b5be8c749c0",
+      "activity_id": "act_4dd8c4544aeb",
       "activity_name": "Site Visit",
       "student": {
         "id": "u_s1",
@@ -42,9 +42,9 @@
       },
       "status": "recorded",
       "check_in": {
-        "id": "evt_f3c0709ced65",
-        "attempt_id": "att_0ba4a73aa7a9",
-        "activity_id": "act_8b5be8c749c0",
+        "id": "evt_5321975ddea3",
+        "attempt_id": "att_f2e9836a8c9a",
+        "activity_id": "act_4dd8c4544aeb",
         "student_id": "u_s1",
         "action": "check_in",
         "status": "recorded",
@@ -63,14 +63,14 @@
       },
       "checkpoints": [
         {
-          "id": "evt_f3fcfcac37e3",
-          "attempt_id": "att_965f359da64e",
-          "activity_id": "act_8b5be8c749c0",
+          "id": "evt_8aae03cb0859",
+          "attempt_id": "att_1f4b3c3a8b61",
+          "activity_id": "act_4dd8c4544aeb",
           "student_id": "u_s1",
           "action": "checkpoint",
           "status": "recorded",
           "received_at": "2026-10-10T09:44:00Z",
-          "checkpoint_id": "cp_79444dc461a1",
+          "checkpoint_id": "cp_a8cdf91b6f14",
           "review_reasons": [],
           "location": {
             "verdict": "inside",
@@ -84,9 +84,9 @@
         }
       ],
       "check_out": {
-        "id": "evt_e7f164bb7ec7",
-        "attempt_id": "att_2225343d192f",
-        "activity_id": "act_8b5be8c749c0",
+        "id": "evt_67a419a0bea5",
+        "attempt_id": "att_0bc37f79ca37",
+        "activity_id": "act_4dd8c4544aeb",
         "student_id": "u_s1",
         "action": "check_out",
         "status": "recorded",
@@ -112,7 +112,7 @@
       "next_actions": []
     },
     {
-      "activity_id": "act_8b5be8c749c0",
+      "activity_id": "act_4dd8c4544aeb",
       "activity_name": "Site Visit",
       "student": {
         "id": "u_s2",
@@ -122,9 +122,9 @@
       },
       "status": "confirmed",
       "check_in": {
-        "id": "evt_5b43835fcd0a",
-        "attempt_id": "att_9e091367b41a",
-        "activity_id": "act_8b5be8c749c0",
+        "id": "evt_34446c3d69a9",
+        "attempt_id": "att_0057993918ab",
+        "activity_id": "act_4dd8c4544aeb",
         "student_id": "u_s2",
         "action": "check_in",
         "status": "needs_review",
@@ -132,7 +132,7 @@
         "checkpoint_id": null,
         "review_reasons": [
           "location_uncertain",
-          "face_mismatch"
+          "face_uncertain"
         ],
         "location": {
           "verdict": "uncertain",
@@ -141,7 +141,7 @@
           "captured_at": "2026-10-10T09:33:55Z"
         },
         "face": {
-          "verdict": "no_match"
+          "verdict": "uncertain"
         }
       },
       "checkpoints": [],
@@ -150,10 +150,10 @@
       "complete": false,
       "review_reasons": [
         "location_uncertain",
-        "face_mismatch"
+        "face_uncertain"
       ],
       "decision": {
-        "id": "dec_d729a9619e09",
+        "id": "dec_41489c4cea61",
         "decision": "confirmed",
         "reason": "Seen on site all morning",
         "actor_name": "Dr. Meera Rao",
@@ -162,7 +162,7 @@
       },
       "decision_history": [
         {
-          "id": "dec_d729a9619e09",
+          "id": "dec_41489c4cea61",
           "decision": "confirmed",
           "reason": "Seen on site all morning",
           "actor_name": "Dr. Meera Rao",
@@ -172,8 +172,8 @@
       ],
       "observations": [
         {
-          "id": "obs_0c476f276a17",
-          "activity_id": "act_8b5be8c749c0",
+          "id": "obs_441826c659bb",
+          "activity_id": "act_4dd8c4544aeb",
           "student_id": "u_s2",
           "observation_type": "present",
           "note": "Signed the paper sheet",
@@ -184,7 +184,7 @@
       "next_actions": []
     },
     {
-      "activity_id": "act_8b5be8c749c0",
+      "activity_id": "act_4dd8c4544aeb",
       "activity_name": "Site Visit",
       "student": {
         "id": "u_s3",

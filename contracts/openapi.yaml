@@ -508,7 +508,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserList'
+                $ref: '#/components/schemas/StudentList'
         '401':
           description: not_authenticated or invalid_credentials
           content:
@@ -548,6 +548,69 @@ paths:
                 $ref: '#/components/schemas/ErrorOut'
         '422':
           description: validation_error, unusable_capture, multiple_faces, location_stale
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+  /api/v1/students/{student_id}/device/reset:
+    post:
+      tags:
+      - activities
+      summary: Reset Device
+      operationId: reset_device_api_v1_students__student_id__device_reset_post
+      parameters:
+      - name: student_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Student Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentOut'
+        '422':
+          description: validation_error, unusable_capture, multiple_faces, location_stale
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: not_authenticated or invalid_credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '403':
+          description: forbidden or not_assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: not_found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '409':
+          description: enrollment_not_approved, outside_activity_window, invalid_action_order,
+            checkpoint_not_open, already_decided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '410':
+          description: attempt_expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '413':
+          description: image_too_large
           content:
             application/json:
               schema:
@@ -1511,6 +1574,15 @@ components:
           - type: string
           - type: 'null'
           title: Checkpoint Id
+        nonce:
+          type: string
+          title: Nonce
+        challenge:
+          type: string
+          enum:
+          - left
+          - right
+          title: Challenge
       type: object
       required:
       - id
@@ -1519,6 +1591,8 @@ components:
       - created_at
       - expires_at
       - checkpoint_id
+      - nonce
+      - challenge
       title: AttemptOut
     AttendanceEventOut:
       properties:
@@ -1698,6 +1772,24 @@ components:
           type: string
           format: date-time
           title: Location Captured At
+        turn_photo:
+          type: string
+          contentMediaType: application/octet-stream
+          title: Turn Photo
+        location_is_mock:
+          type: boolean
+          title: Location Is Mock
+        device_rooted:
+          type: boolean
+          title: Device Rooted
+        device_emulator:
+          type: boolean
+          title: Device Emulator
+        signature:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Signature
       type: object
       required:
       - selfie
@@ -1705,6 +1797,11 @@ components:
       - lng
       - accuracy_m
       - location_captured_at
+      - turn_photo
+      - location_is_mock
+      - device_rooted
+      - device_emulator
+      - signature
       title: Body_submit_attempt_api_v1_attempts__attempt_id__submit_post
     Body_upload_enrollment_api_v1_enrollment_post:
       properties:
@@ -1923,6 +2020,12 @@ components:
           maxLength: 200
           minLength: 1
           title: Password
+        device_public_key:
+          anyOf:
+          - type: string
+            maxLength: 512
+          - type: 'null'
+          title: Device Public Key
       type: object
       required:
       - username
@@ -2040,6 +2143,47 @@ components:
       required:
       - reason
       title: RejectIn
+    StudentList:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/StudentOut'
+          type: array
+          title: Items
+      type: object
+      required:
+      - items
+      title: StudentList
+    StudentOut:
+      properties:
+        id:
+          type: string
+          title: Id
+        username:
+          type: string
+          title: Username
+        full_name:
+          type: string
+          title: Full Name
+        role:
+          type: string
+          enum:
+          - student
+          - faculty
+          title: Role
+        device_bound_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Device Bound At
+      type: object
+      required:
+      - id
+      - username
+      - full_name
+      - role
+      - device_bound_at
+      title: StudentOut
     UserList:
       properties:
         items:

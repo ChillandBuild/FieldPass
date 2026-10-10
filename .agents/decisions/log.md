@@ -15,5 +15,6 @@ No migration tool. Schema is created by `create_all` at startup (SQLite and Post
 | 2026-10-10 | Software never decides attendance; faculty make the final call | Selfie is not liveness, location is spoofable, times are observations | Auto-confirm, numeric confidence in API |
 | 2026-10-10 | Contract frozen as v1; new behaviour goes in API.md Addendum | Three clients depend on one contract | Editing frozen sections in place |
 | 2026-10-10 | Second brain scaffolded (`.agents/`, close script, lefthook) | Low-context agent memory | — |
+| 2026-10-11 | Anti-cheat A adds columns (`attempts.nonce`, `attempts.challenge`, `attendance_events.location_fingerprint`); existing databases need a reset or `ALTER TABLE ... ADD COLUMN`. **Reverses** the earlier additive-only/no-DB-reset decision (decision 7 in `.agents/projects/duty-zones-plan.md`) | Nonce and head-turn challenge belong to the attempt and the repeated-location hash to the event; a side table for each would add joins for no gain, and `create_all` cannot add columns. Statements are in `contracts/API.md` | Side tables (additive-only); Alembic |
 
 Commit history (all 2026-10-10): 7c63204 prototype, d087e5a timing settings + e2e + Android fixes, 3ca27f6 Campus Minimal student app, 65fa39e Campus Minimal dashboard + faculty login, bc893ee optional Postgres, 93a491a remove generated screenshots.

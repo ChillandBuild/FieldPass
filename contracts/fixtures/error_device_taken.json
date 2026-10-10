@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "device_taken",
+    "message": "This phone is linked to another student."
+  }
+}
