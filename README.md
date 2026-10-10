@@ -76,7 +76,7 @@ and there is no liveness field.
 
 | Tool | Version | Notes |
 |---|---|---|
-| Python | 3.11 | The backend setup uses the 3.11 binary explicitly: `/Users/prem/.local/bin/python3.11` |
+| Python | 3.11 | The backend needs 3.11 exactly, and the setup names the 3.11 binary explicitly. Check with `python3.11 --version`. On the demo laptop it is `/Users/prem/.local/bin/python3.11`. That path exists only on that laptop (a uv-managed copy). On another machine install Python 3.11 first and use its path instead |
 | Node.js | 22 | With npm. For the dashboard |
 | JDK | 21 | The Android README says JDK 17 or newer works; 21 is what we use |
 | Android command-line tools | see below | For building and installing the app |
@@ -103,15 +103,16 @@ This runs the backend and the dashboard on your laptop. For the phone and the ho
 
 ```bash
 cd backend
-/Users/prem/.local/bin/python3.11 -m venv .venv
+/Users/prem/.local/bin/python3.11 -m venv .venv     # on another machine: the path of your Python 3.11
 .venv/bin/pip install -r requirements-dev.txt
 
 cp .env.example .env
 .venv/bin/python -m app.gen_secrets      # prints four lines: JWT_SECRET, PHOTO_ENCRYPTION_KEY, SEED_PASSWORD, FACULTY_SEED_PASSWORD
 ```
 
-Open `backend/.env` and fill in these four values. You can paste all four printed lines. The two
-password lines are suggestions: different random values. You may choose your own instead.
+Open `backend/.env` and fill in these four values. `.env` already has an empty line for each of them
+(`JWT_SECRET=`). Put each printed value after the `=` on its own line. Do not add a second line for the same
+name. The two password lines are suggestions: different random values. You may choose your own instead.
 
 - `JWT_SECRET` and `PHOTO_ENCRYPTION_KEY`: required.
 - `SEED_PASSWORD`: the password for the three student accounts. Required.
@@ -126,13 +127,20 @@ Then download the face models, create the accounts, and start the server:
 ```bash
 .venv/bin/python scripts/download_models.py      # YuNet + SFace into models/ (about 39 MB)
 .venv/bin/python -m app.seed                     # demo accounts (safe to run again)
-./run.sh                                         # listens on 0.0.0.0:8000
+./run.sh                                         # listens on 0.0.0.0:8000. Another port: ./run.sh 8002
 ```
+
+The first start in a new virtual environment was slow when checked on 2026-10-10: about 45 seconds before the
+terminal showed `Application startup complete.` and `Uvicorn running on http://0.0.0.0:8000`. Until then,
+`curl` gets "connection refused". Wait for those two lines. The next start took about 1 second.
 
 The interactive API docs (`/docs`, `/redoc`, `/openapi.json`) are off unless you set `ENABLE_DOCS=true`
 in `backend/.env`. The default is off.
 
-Check it: `curl http://localhost:8000/api/v1/health` should return `{"status": "ok", ...}`.
+Check it: `curl http://localhost:8000/api/v1/health` should return `{"status":"ok","server_time":"..."}`.
+Then check it on the laptop's network address too: `curl http://$(ipconfig getifaddr en0):8000/api/v1/health`.
+The same answer on both addresses proves the server listens on all interfaces, which the phone needs.
+(If your port is not 8000, use your port in both commands.)
 
 Demo accounts:
 
@@ -154,9 +162,15 @@ cp .env.example .env.local
 npm run dev                  # http://localhost:5173
 ```
 
+To use another port, add it after `--`: `npm run dev -- --port 5174`. Then open `http://localhost:5174`, and add
+`http://localhost:5174` to `CORS_ORIGINS` in `backend/.env` (see section 8 of the runbook), or the login screen
+will say it cannot reach the server.
+
 Open http://localhost:5173, sign in as `faculty1`. In `.env.local`, `VITE_USE_FIXTURES` must be `false`
-(or the line removed) to use the real backend. On the login screen, type the backend address in
-"Server address" (for a one-laptop run, `http://localhost:8000`) and press "Test connection".
+(or the line removed) to use the real backend. `.env.example` already says `false`. On the login screen, type
+the backend address in "Server address" (for a one-laptop run, `http://localhost:8000`) and press "Test
+connection". The field starts filled with the example address `http://192.168.43.10:8000`, which is almost
+certainly wrong for you, so always replace it. A good result reads "Connected. Server time ...".
 
 ### 3. Android app
 
@@ -167,6 +181,11 @@ export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
 adb devices
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
+
+The APK is written to `android/app/build/outputs/apk/debug/app-debug.apk` (about 18 MB). If Gradle stops with
+"SDK location not found", neither `ANDROID_HOME` nor `android/local.properties` is set. Either one is enough.
+The build checked on 2026-10-10 took 4 to 7 seconds because that laptop's Gradle cache was already warm. A first
+build on a machine with an empty cache was not tested. Expect it to need internet and to take longer.
 
 A phone cannot reach `localhost` on your laptop, so the app needs the laptop's network address.
 That is covered in the runbook.

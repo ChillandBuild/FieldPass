@@ -10,7 +10,7 @@ Python 3.11 is required (the system `python3` may be newer; use the 3.11 binary 
 
 ```bash
 cd backend
-/Users/prem/.local/bin/python3.11 -m venv .venv
+python3.11 -m venv .venv     # if python3.11 is not on your PATH, use its full path (find it with: which -a python3.11)
 .venv/bin/pip install -r requirements-dev.txt        # runtime + test tools
 
 cp .env.example .env
@@ -32,6 +32,22 @@ Demo accounts: `student1`, `student2`, `student3` (password `SEED_PASSWORD`) and
 `FACULTY_SEED_PASSWORD`). Faculty can approve photos and decide attendance, so they have their own password.
 `--demo-activity` creates an activity that starts now, lasts 4 hours, has a 100 m radius and all
 three students on the roster. Run it again for a fresh one.
+
+## Timing settings
+
+All optional, read from `.env` or the environment. Defaults match `../contracts/API.md`.
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `ATTEMPT_TTL_SECONDS` | 90 | How long an attempt can still be submitted after it is created |
+| `LOCATION_MAX_AGE_SECONDS` | 60 | Oldest location reading accepted |
+| `CHECKIN_LEAD_MINUTES` | 15 | Check-in opens this long before `starts_at` (and closes at `ends_at`) |
+| `CHECKOUT_GRACE_MINUTES` | 30 | Check-out stays open this long after `ends_at`; after that a check-in with no check-out is `missing_checkout` |
+
+The two window settings are numbers of minutes (fractions allowed, so `0.5` is 30 s), from 0 to 10080 (7 days).
+A negative, non-numeric, `nan` or too large value stops the server at startup with a message naming the setting.
+Changing them changes the contract's 15/30 minute rules for that server; use non-default values only for tests
+(the end-to-end tests start a backend with a short attempt TTL and a zero checkout grace).
 
 ## Run (LAN)
 

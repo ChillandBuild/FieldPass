@@ -55,7 +55,7 @@ def create_attempt(
     _approved_enrollment(session, student.id)
     now = clock.now()
     events, windows = _student_state(session, activity.id, student.id)
-    checkpoint_id = rules.check_action_allowed(body.action, activity, events, windows, now)
+    checkpoint_id = rules.check_action_allowed(body.action, activity, events, windows, now, rules.timing_from(settings))
     attempt = Attempt(
         id=new_id("att"), student_id=student.id, activity_id=activity.id, action=body.action,
         checkpoint_id=checkpoint_id, created_at=now,
@@ -156,7 +156,9 @@ def submit_attempt(
     enrollment = _approved_enrollment(session, student.id)
     events, windows = _student_state(session, activity.id, student.id)
     try:
-        rules.check_action_allowed(attempt.action, activity, events, windows, attempt.created_at)
+        rules.check_action_allowed(
+            attempt.action, activity, events, windows, attempt.created_at, rules.timing_from(settings)
+        )
     except errors.ApiError:
         # A concurrent duplicate submit may have just saved this very attempt: that is a replay, not a conflict.
         saved = _event_for(session, attempt.id)

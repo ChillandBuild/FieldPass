@@ -11,6 +11,12 @@ export const DASHBOARD_ORIGIN = `http://127.0.0.1:${DASHBOARD_PORT}`
 const BACKEND_DIR = path.resolve(import.meta.dirname, '../../../backend')
 const PYTHON = path.join(BACKEND_DIR, '.venv/bin/python')
 const STATE_FILE = path.join(tmpdir(), 'fieldpass-e2e-state.json')
+const SHORT_STATE_FILE = path.join(tmpdir(), 'fieldpass-e2e-short-state.json')
+
+/** The second backend (short attempt TTL, zero checkout grace) used by timing.spec.ts. */
+export const SHORT_BACKEND_PORT = Number(process.env.E2E_SHORT_BACKEND_PORT ?? 8001)
+export const SHORT_BACKEND_URL = `http://127.0.0.1:${SHORT_BACKEND_PORT}`
+export const SHORT_ATTEMPT_TTL_SECONDS = 4
 
 interface State {
   pid: number
@@ -37,11 +43,11 @@ export function passwordFor(username: string): string {
   return username.startsWith('faculty') ? state.facultyPassword : state.password
 }
 
-async function waitForHealth(timeoutMs: number): Promise<void> {
+async function waitForHealth(baseUrl: string, timeoutMs: number): Promise<void> {
   const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/v1/health`)
+      const res = await fetch(`${baseUrl}/api/v1/health`)
       if (res.ok) return
     } catch {
       // not up yet
@@ -51,11 +57,18 @@ async function waitForHealth(timeoutMs: number): Promise<void> {
   throw new Error('Backend did not become healthy in time')
 }
 
+interface LaunchOptions {
+  port: number
+  stateFile: string
+  /** Extra settings for this server only, on top of backend/.env. */
+  settings: Record<string, string>
+}
+
 /**
  * Starts the real backend (real OpenCV face engine) on a throwaway database and photo folder,
  * seeds the demo accounts, and records what to clean up in a state file.
  */
-export async function startBackend(): Promise<void> {
+async function launchBackend({ port, stateFile, settings }: LaunchOptions): Promise<void> {
   if (!existsSync(PYTHON)) throw new Error(`Backend virtualenv missing: ${PYTHON}`)
   if (!existsSync(path.join(BACKEND_DIR, 'models/face_recognition_sface_2021dec.onnx'))) {
     const dl = spawnSync(PYTHON, ['scripts/download_models.py'], { cwd: BACKEND_DIR, stdio: 'inherit' })
@@ -69,6 +82,7 @@ export async function startBackend(): Promise<void> {
     DATABASE_PATH: path.join(tempDir, 'e2e.db'),
     PHOTO_DIR: path.join(tempDir, 'photos'),
     CORS_ORIGINS: DASHBOARD_ORIGIN,
+    ...settings,
   }
   const seed = spawnSync(PYTHON, ['-m', 'app.seed'], { cwd: BACKEND_DIR, env, encoding: 'utf-8' })
   if (seed.status !== 0) {
@@ -77,29 +91,53 @@ export async function startBackend(): Promise<void> {
   }
   const server: ChildProcess = spawn(
     PYTHON,
-    ['-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', String(BACKEND_PORT)],
+    ['-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', String(port)],
     { cwd: BACKEND_DIR, env, stdio: 'ignore', detached: true },
   )
   server.unref()
   const state: State = { pid: server.pid ?? 0, tempDir, password, facultyPassword }
-  writeFileSync(STATE_FILE, JSON.stringify(state), { mode: 0o600 })
+  writeFileSync(stateFile, JSON.stringify(state), { mode: 0o600 })
   try {
-    await waitForHealth(60_000)
+    await waitForHealth(`http://127.0.0.1:${port}`, 60_000)
   } catch (err) {
-    stopBackend()
+    haltBackend(stateFile)
     throw err
   }
 }
 
-/** Stops the server and deletes the throwaway database, photos and state file. */
-export function stopBackend(): void {
-  if (!existsSync(STATE_FILE)) return
-  const state = JSON.parse(readFileSync(STATE_FILE, 'utf-8')) as State
+/** Stops the server recorded in `stateFile` and deletes its throwaway database, photos and the state file. */
+function haltBackend(stateFile: string): void {
+  if (!existsSync(stateFile)) return
+  const state = JSON.parse(readFileSync(stateFile, 'utf-8')) as State
   try {
     if (state.pid) process.kill(-state.pid, 'SIGTERM')
   } catch {
     // already gone
   }
   rmSync(state.tempDir, { recursive: true, force: true })
-  rmSync(STATE_FILE, { force: true })
+  rmSync(stateFile, { force: true })
+}
+
+export function startBackend(): Promise<void> {
+  return launchBackend({ port: BACKEND_PORT, stateFile: STATE_FILE, settings: {} })
+}
+
+export function stopBackend(): void {
+  haltBackend(STATE_FILE)
+}
+
+/**
+ * Second real backend on its own throwaway data: a few seconds of attempt lifetime and no check-out grace,
+ * so attempt expiry and a missing check-out happen after a short real wait. Nothing in the app is faked.
+ */
+export function startShortBackend(): Promise<void> {
+  return launchBackend({
+    port: SHORT_BACKEND_PORT,
+    stateFile: SHORT_STATE_FILE,
+    settings: { ATTEMPT_TTL_SECONDS: String(SHORT_ATTEMPT_TTL_SECONDS), CHECKOUT_GRACE_MINUTES: '0' },
+  })
+}
+
+export function stopShortBackend(): void {
+  haltBackend(SHORT_STATE_FILE)
 }

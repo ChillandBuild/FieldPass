@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Runs the app's networking layer against a throw-away REAL backend on a spare port.
 # Usage: android/scripts/integration-test.sh [port]   (default 8001)
+# Two runs, each on a fresh backend: default settings (BackendContractTest), then ATTEMPT_TTL_SECONDS=4 and
+# CHECKOUT_GRACE_MINUTES=0 (TimingContractTest). Exits non-zero if either fails.
 # Uses a temp database and photo dir, the real OpenCV face engine, and deletes everything on exit.
 # Never prints secrets: SEED_PASSWORD (students) and FACULTY_SEED_PASSWORD (faculty1) are read from
 # backend/.env (or the environment) and passed on via env.
@@ -38,16 +40,55 @@ read_setting() {
 PASSWORD="$(read_setting SEED_PASSWORD)"
 FACULTY_PASSWORD="$(read_setting FACULTY_SEED_PASSWORD)"
 
-export DATABASE_PATH="$TMP/fieldpass.db" PHOTO_DIR="$TMP/photos"
-(cd "$BACKEND" && "$PY" -m app.seed >/dev/null)
-(cd "$BACKEND" && exec "$PY" -m uvicorn app.main:app --host 127.0.0.1 --port "$PORT" >"$TMP/server.log" 2>&1) &
-SERVER_PID=$!
-for _ in $(seq 1 40); do
-  curl -fs "http://127.0.0.1:$PORT/api/v1/health" >/dev/null 2>&1 && break
-  sleep 0.5
-done
-curl -fs "http://127.0.0.1:$PORT/api/v1/health" >/dev/null || { echo "backend did not start" >&2; tail -5 "$TMP/server.log" >&2; exit 1; }
+# Starts a fresh throw-away backend on $PORT (new database each time). Extra NAME=value arguments become
+# settings of that server only. Sets SERVER_PID.
+start_backend() {
+  local data="$TMP/data-$1"; shift
+  mkdir -p "$data"
+  (cd "$BACKEND" && env DATABASE_PATH="$data/fieldpass.db" PHOTO_DIR="$data/photos" "$@" "$PY" -m app.seed >/dev/null)
+  (cd "$BACKEND" && exec env DATABASE_PATH="$data/fieldpass.db" PHOTO_DIR="$data/photos" "$@" \
+    "$PY" -m uvicorn app.main:app --host 127.0.0.1 --port "$PORT" >"$data/server.log" 2>&1) &
+  SERVER_PID=$!
+  for _ in $(seq 1 40); do
+    curl -fs "http://127.0.0.1:$PORT/api/v1/health" >/dev/null 2>&1 && break
+    sleep 0.5
+  done
+  curl -fs "http://127.0.0.1:$PORT/api/v1/health" >/dev/null || { echo "backend did not start" >&2; tail -5 "$data/server.log" >&2; exit 1; }
+}
 
-cd "$ANDROID"
-FIELDPASS_API_URL="http://127.0.0.1:$PORT" FIELDPASS_PASSWORD="$PASSWORD" FIELDPASS_FACULTY_PASSWORD="$FACULTY_PASSWORD" FIELDPASS_FACE_IMAGE="$FACE" \
-  ./gradlew testDebugUnitTest --tests 'com.fieldpass.student.integration.*' -i 2>&1 | tee "${INTEGRATION_LOG:-/dev/null}" | grep -E "\[integration\]|BUILD|tests completed|FAILED|AssertionError|Exception" || true
+stop_backend() {
+  [ -n "$SERVER_PID" ] && kill "$SERVER_PID" 2>/dev/null || true
+  [ -n "$SERVER_PID" ] && wait "$SERVER_PID" 2>/dev/null || true
+  SERVER_PID=""
+}
+
+# Runs one test class against the current backend. Prints the [integration] lines and fails the script if Gradle fails.
+run_tests() {
+  local test_class="$1"; shift
+  local status=0
+  (cd "$ANDROID" && env FIELDPASS_API_URL="http://127.0.0.1:$PORT" FIELDPASS_PASSWORD="$PASSWORD" \
+    FIELDPASS_FACULTY_PASSWORD="$FACULTY_PASSWORD" FIELDPASS_FACE_IMAGE="$FACE" "$@" \
+    ./gradlew testDebugUnitTest --tests "com.fieldpass.student.integration.$test_class" -i) >"$TMP/gradle.log" 2>&1 || status=$?
+  cat "$TMP/gradle.log" >>"${INTEGRATION_LOG:-/dev/null}"
+  grep -E "\[integration\]|BUILD|tests completed|FAILED|AssertionError|Exception" "$TMP/gradle.log" || true
+  [ "$status" -eq 0 ] || { echo "[integration] gradle exited with $status; last lines of its log:" >&2; tail -25 "$TMP/gradle.log" >&2; }
+  return "$status"
+}
+
+[ -z "${INTEGRATION_LOG:-}" ] || : >"$INTEGRATION_LOG"
+
+# Run 1: default settings (90 s attempts, 15/30 minute windows): the 20 contract steps.
+echo "[integration] run 1: default backend settings"
+RESULT=0
+start_backend default
+run_tests BackendContractTest || RESULT=1
+stop_backend
+
+# Run 2: short settings so attempt expiry and a missing check-out happen after a few real seconds.
+echo "[integration] run 2: ATTEMPT_TTL_SECONDS=4, CHECKOUT_GRACE_MINUTES=0"
+start_backend short ATTEMPT_TTL_SECONDS=4 CHECKOUT_GRACE_MINUTES=0
+run_tests TimingContractTest FIELDPASS_SHORT_TIMING=1 || RESULT=1
+stop_backend
+
+[ "$RESULT" -eq 0 ] && echo "[integration] all runs passed" || echo "[integration] FAILED: see the lines above" >&2
+exit "$RESULT"

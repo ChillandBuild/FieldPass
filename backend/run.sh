@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 PORT="${1:-8000}"
 if [ ! -x .venv/bin/python ]; then
-  echo "No virtualenv. Run: /Users/prem/.local/bin/python3.11 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt" >&2
+  echo "No virtualenv. Run: python3.11 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt" >&2
   exit 1
 fi
 LAN_IP="$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || true)"

@@ -109,7 +109,9 @@ def _observation_out(obs: Observation, users: dict[str, User]) -> ObservationOut
     )
 
 
-def build_record(data: ActivityData, student: User, now: datetime, with_actions: bool) -> AttendanceRecordOut:
+def build_record(
+    data: ActivityData, student: User, now: datetime, with_actions: bool, timing: rules.Timing
+) -> AttendanceRecordOut:
     events = data.events.get(student.id, [])
     decisions = data.decisions.get(student.id, [])
     current = rules.current_decision(decisions, events)
@@ -122,13 +124,13 @@ def build_record(data: ActivityData, student: User, now: datetime, with_actions:
         check_in=event_out(check_in) if check_in else None,
         checkpoints=[event_out(e) for e in events if e.action == "checkpoint"],
         check_out=event_out(check_out) if check_out else None,
-        missing_checkout=rules.missing_checkout(data.activity, events, now),
+        missing_checkout=rules.missing_checkout(data.activity, events, now, timing),
         complete=rules.is_complete(events),
         review_reasons=rules.union_reasons(events),
         decision=_decision_out(current, current, data.users) if current else None,
         decision_history=[_decision_out(d, current, data.users) for d in reversed(ordered)],
         observations=[_observation_out(o, data.users) for o in data.observations.get(student.id, [])],
-        next_actions=rules.next_actions(data.activity, events, data.windows, now) if with_actions else [],
+        next_actions=rules.next_actions(data.activity, events, data.windows, now, timing) if with_actions else [],
     )
 
 

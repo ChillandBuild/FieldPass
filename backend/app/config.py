@@ -1,6 +1,7 @@
 """Environment-driven settings. Fails fast when a required secret is missing."""
 from __future__ import annotations
 
+import math
 import os
 from dataclasses import dataclass
 from functools import lru_cache
@@ -15,6 +16,10 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 # (`double cosine_similar_thresh = 0.363;`), also used by opencv_zoo's sface.py.
 DEFAULT_FACE_MATCH_THRESHOLD = 0.363
 DEFAULT_FACE_UNCERTAIN_MARGIN = 0.1
+
+DEFAULT_CHECKIN_LEAD_MINUTES = 15.0
+DEFAULT_CHECKOUT_GRACE_MINUTES = 30.0
+MAX_WINDOW_MINUTES = 7 * 24 * 60  # an activity lasts at most 7 days; a longer lead or grace is a typo
 
 REQUIRED_SECRETS = ("JWT_SECRET", "PHOTO_ENCRYPTION_KEY", "SEED_PASSWORD", "FACULTY_SEED_PASSWORD")
 MIN_JWT_SECRET_CHARS = 32
@@ -41,6 +46,8 @@ class Settings:
     location_max_age_seconds: int
     token_ttl_minutes: int
     enable_docs: bool = False
+    checkin_lead_minutes: float = DEFAULT_CHECKIN_LEAD_MINUTES
+    checkout_grace_minutes: float = DEFAULT_CHECKOUT_GRACE_MINUTES
 
 
 def _read_env_file(path: Path) -> dict[str, str]:
@@ -69,6 +76,14 @@ def _number(env: dict[str, str], key: str, default: float, cast: type) -> float:
         return cast(raw)
     except ValueError as exc:
         raise ConfigError(f"{key} must be a number, got {raw!r}") from exc
+
+
+def _minutes(env: dict[str, str], key: str, default: float) -> float:
+    """A non-negative, finite number of minutes (fractions allowed), at most MAX_WINDOW_MINUTES."""
+    value = float(_number(env, key, default, float))
+    if not math.isfinite(value) or value < 0 or value > MAX_WINDOW_MINUTES:
+        raise ConfigError(f"{key} must be between 0 and {MAX_WINDOW_MINUTES} minutes, got {env.get(key)!r}")
+    return value
 
 
 def _check_secrets(env: dict[str, str]) -> None:
@@ -113,6 +128,8 @@ def load_settings(env_file: Path | None = None, environ: dict[str, str] | None =
         location_max_age_seconds=int(_number(env, "LOCATION_MAX_AGE_SECONDS", 60, int)),
         token_ttl_minutes=int(_number(env, "TOKEN_TTL_MINUTES", 480, int)),
         enable_docs=env.get("ENABLE_DOCS", "").strip().lower() in TRUE_WORDS,
+        checkin_lead_minutes=_minutes(env, "CHECKIN_LEAD_MINUTES", DEFAULT_CHECKIN_LEAD_MINUTES),
+        checkout_grace_minutes=_minutes(env, "CHECKOUT_GRACE_MINUTES", DEFAULT_CHECKOUT_GRACE_MINUTES),
     )
 
 
