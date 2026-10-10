@@ -22,7 +22,7 @@ from app.main import create_app  # noqa: E402
 from app.seed import seed_users  # noqa: E402
 from scripts.fixture_env import FACULTY_PASSWORD, SEED_PASSWORD, throwaway_settings  # noqa: E402
 from tests.fakes import BLANK, TWO_FACES, FakeFaceEngine, face  # noqa: E402
-from tests.helpers import P, VENUE, Api, offset_lat  # noqa: E402
+from tests.helpers import P, VENUE, Api, new_device_key, offset_lat  # noqa: E402
 
 OUT = BACKEND.parent / "contracts" / "fixtures"
 START = datetime(2026, 10, 10, 9, 0, 0, tzinfo=timezone.utc)
@@ -159,7 +159,8 @@ def main() -> None:
             helpers.PASSWORD = SEED_PASSWORD
             helpers.FACULTY_PASSWORD = FACULTY_PASSWORD
             api = Api(client, fake_clock)
-            login = client.post(f"{P}/auth/login", json={"username": "student1", "password": SEED_PASSWORD}).json()
+            login = client.post(f"{P}/auth/login", json={"username": "student1", "password": SEED_PASSWORD,
+                                                         "device_public_key": api.keys.setdefault("student1", new_device_key())[1]}).json()
             login["access_token"] = "eyJhbGciOiJIUzI1NiJ9.example-access-token"
             save("login", login)
             keep("health", client.get(f"{P}/health"), 200)

@@ -1,7 +1,11 @@
 """Small convenience wrapper over the TestClient."""
 from __future__ import annotations
 
+import base64
 from datetime import datetime, timedelta
+
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 from app.clock import to_iso
 from tests.fakes import face
@@ -11,6 +15,13 @@ FACULTY_PASSWORD = "test-faculty-password"
 VENUE = (12.9716, 77.5946)
 STUDENT_IDS = {"student1": "u_s1", "student2": "u_s2", "student3": "u_s3"}
 P = "/api/v1"
+
+
+def new_device_key():  # noqa: ANN201
+    """A fresh P-256 key pair, public half as Base64 SubjectPublicKeyInfo DER (what the phone sends)."""
+    private = ec.generate_private_key(ec.SECP256R1())
+    der = private.public_key().public_bytes(Encoding.DER, PublicFormat.SubjectPublicKeyInfo)
+    return private, base64.b64encode(der).decode()
 
 
 def offset_lat(metres: float) -> float:
@@ -23,11 +34,15 @@ class Api:
         self.client = client
         self.clock = clock
         self._tokens: dict[str, dict[str, str]] = {}
+        self.keys: dict[str, tuple] = {}  # username -> (private key, public b64): one phone per student
 
     def auth(self, username: str) -> dict[str, str]:
         if username not in self._tokens:
             password = FACULTY_PASSWORD if username.startswith("faculty") else PASSWORD
-            body = self.client.post(f"{P}/auth/login", json={"username": username, "password": password}).json()
+            req = {"username": username, "password": password}
+            if not username.startswith("faculty"):
+                req["device_public_key"] = self.keys.setdefault(username, new_device_key())[1]
+            body = self.client.post(f"{P}/auth/login", json=req).json()
             self._tokens[username] = {"Authorization": f"Bearer {body['access_token']}"}
         return self._tokens[username]
 

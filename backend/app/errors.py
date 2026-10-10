@@ -96,6 +96,22 @@ def too_many_attempts() -> ApiError:
     return ApiError(429, "too_many_attempts", "Too many sign-in tries. Wait a minute and retry.")
 
 
+def device_key_required() -> ApiError:
+    return ApiError(422, "device_key_required", "Update the FieldPass app. This version cannot sign in.")
+
+
+def device_mismatch() -> ApiError:
+    return ApiError(403, "device_mismatch", "This account is linked to another phone. Ask faculty to reset your device.")
+
+
+def device_taken() -> ApiError:
+    return ApiError(403, "device_taken", "This phone is linked to another student.")
+
+
+def bad_signature() -> ApiError:
+    return ApiError(403, "bad_signature", "This check-in could not be verified from your phone. Start again.")
+
+
 def _envelope(status: int, code: str, message: str, headers: dict | None = None) -> JSONResponse:
     return JSONResponse({"error": {"code": code, "message": message}}, status_code=status, headers=headers)
 

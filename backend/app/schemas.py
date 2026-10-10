@@ -188,6 +188,8 @@ class ErrorOut(BaseModel):
 class LoginIn(BaseModel):
     username: str = Field(min_length=1, max_length=100)
     password: str = Field(min_length=1, max_length=200)
+    # Students only: Base64 SubjectPublicKeyInfo of the phone's Keystore key. Faculty omit it.
+    device_public_key: str | None = Field(default=None, max_length=512)
 
 
 class ApproveIn(BaseModel):

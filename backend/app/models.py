@@ -23,6 +23,15 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String)
 
 
+class StudentDevice(Base):
+    """The one phone a student may use. A faculty reset deletes the row; the next login binds again."""
+
+    __tablename__ = "student_devices"
+    student_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    public_key: Mapped[str] = mapped_column(Text, unique=True)
+    bound_at: Mapped[datetime] = mapped_column(UTCDateTime)
+
+
 class Enrollment(Base):
     """One current row per student. A re-upload replaces it with a new row (new id), status pending."""
 
