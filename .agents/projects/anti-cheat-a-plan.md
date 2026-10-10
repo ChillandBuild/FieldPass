@@ -36,7 +36,7 @@
 - Shared test vector (used by Task 1, Task 9 and Task 12): attempt `att_1`, nonce `n0nce`, selfie bytes `A`, turn bytes `B`, lat 12.9716, lng 77.5946, accuracy 10, captured `2026-10-10T09:31:05Z`, flags mock=0 rooted=1 emulator=0 →
   `"fieldpass-attempt-v1\natt_1\nn0nce\n559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd\ndf7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c\n12.971600\n77.594600\n10.0\n1791624665\n0\n1\n0"`
 - Key format: public key = Base64 (no wrap) of X.509 SubjectPublicKeyInfo DER, EC secp256r1. Signature = Base64 (no wrap) of DER ECDSA (`SHA256withECDSA` on Android).
-- Working tree note: `git status` shows uncommitted changes in Android login files, dashboard login/shell and READMEs. Ask the user to commit or stash them before Task 1.
+- Working tree note: the tree was clean when this plan was refreshed (2026-10-11). Run `git status` before Task 1; if it is dirty, stop and ask.
 
 ## Review Focus
 
@@ -259,7 +259,7 @@ git commit -m "feat: add device signature and location fingerprint helpers"
 
 **Files:**
 - Create: `backend/app/devices.py`
-- Modify: `backend/app/models.py` (add `StudentDevice` after `User`, line ~24), `backend/app/errors.py` (after `too_many_attempts`, line ~93), `backend/app/schemas.py:181-183` (`LoginIn`), `backend/app/routers/auth.py:29-44` (`login`)
+- Modify: `backend/app/models.py` (add `StudentDevice` after `User`, line ~24), `backend/app/errors.py` (after `too_many_attempts`, line ~96), `backend/app/schemas.py:188-190` (`LoginIn`), `backend/app/routers/auth.py:29-44` (`login`)
 - Modify tests: `backend/tests/helpers.py` (Api signs in with a key), `backend/tests/test_auth.py` lines 10, 20, 122 and `backend/tests/test_errors_and_app.py:66` (successful student logins), `backend/scripts/generate_fixtures.py:162`
 - Test: `backend/tests/test_devices.py`
 
@@ -563,7 +563,7 @@ class StudentList(BaseModel):
     items: list[StudentOut]
 ```
 
-`backend/app/routers/activities.py` (imports at lines 6-12): change to `from sqlalchemy import delete, select`, add `StudentDevice` to the `app.models` import, and in the `app.schemas` import replace `UserList` with `StudentList, StudentOut` (`UserList` is no longer used here; keep it in schemas.py). `clock` is already imported as a module. Replace `list_students` and add the reset route:
+`backend/app/routers/activities.py` (imports at lines 6-15): change to `from sqlalchemy import delete, select`, add `StudentDevice` to the `app.models` import (line 11, which already has `VenueRegion`), and add `StudentList, StudentOut` to the `app.schemas` import (line 12; keep `UserList`, `roster` still returns it). `clock` is already imported as a module. Replace `list_students` and add the reset route:
 
 ```python
 def _student_out(session: Session, student: User) -> StudentOut:
@@ -606,8 +606,8 @@ git commit -m "feat: show bound phone per student and let faculty reset it"
 ### Task 4: Attempts carry a nonce and a head-turn challenge
 
 **Files:**
-- Modify: `backend/app/models.py` (`Attempt`, line ~71), `backend/app/schemas.py:139-145` (`AttemptOut`), `backend/app/routers/attempts.py:46-73` (`create_attempt`)
-- Modify tests: `backend/tests/helpers.py` (`Api.attempt` remembers the response)
+- Modify: `backend/app/models.py` (`Attempt`, lines 80-88), `backend/app/schemas.py:146-152` (`AttemptOut`), `backend/app/routers/attempts.py:45-69` (`create_attempt`)
+- Modify tests: `backend/tests/helpers.py` (`Api.attempt` remembers the response), `backend/tests/test_postgres.py:55` (`make_event` builds an `Attempt(...)` directly: add `nonce="n0nce", challenge="left"`; these Postgres tests are opt-in)
 - Test: `backend/tests/test_attempts.py` (append)
 
 **Interfaces:**
@@ -693,8 +693,8 @@ git commit -m "feat: give each attempt a nonce and a head-turn challenge"
 ### Task 5: Submit is signed by the bound phone
 
 **Files:**
-- Modify: `backend/app/routers/attempts.py:125-171` (`submit_attempt`)
-- Modify tests: `backend/tests/helpers.py` (`signed_form`, `submit`), `backend/tests/test_attempts.py:224-238` (concurrent test uses `signed_form`)
+- Modify: `backend/app/routers/attempts.py:124-176` (`submit_attempt`)
+- Modify tests: `backend/tests/helpers.py` (`signed_form`, `submit`), `backend/tests/test_attempts.py:222-250` (`test_concurrent_duplicate_submits_make_one_event` uses `signed_form`)
 - Test: `backend/tests/test_submit_signing.py`
 
 **Interfaces:**
@@ -888,7 +888,7 @@ git commit -m "feat: verify the bound phone's signature on every submit"
 ### Task 6: Fake-GPS, rooted, emulator and repeated-location flags
 
 **Files:**
-- Modify: `backend/app/models.py:104-112` (`AttendanceEvent`), `backend/app/routers/attempts.py:80-94` (`_build_event`) and the tail of `submit_attempt`
+- Modify: `backend/app/models.py:91-123` (`AttendanceEvent`), `backend/app/routers/attempts.py:80-94` (`_build_event`) and the tail of `submit_attempt` (lines 168-176, after the `face_not_matched` refusal)
 - Modify tests: `backend/tests/helpers.py` (`signed_form` default location gets a tiny per-submit nudge)
 - Test: `backend/tests/test_integrity_flags.py`
 
@@ -966,8 +966,9 @@ def test_same_point_as_another_student_is_not_repeated(api, ready):
 
 
 def test_flags_add_after_location_and_face_reasons(api, ready):
-    resp = api.do("student1", ready["id"], "check_in", "ravi", mock=True)
-    assert reasons(resp) == ("needs_review", ["face_mismatch", "location_mocked"])
+    # "asha~" is an uncertain match; a clearly different face is refused with face_not_matched and never saved
+    resp = api.do("student1", ready["id"], "check_in", "asha~", mock=True)
+    assert reasons(resp) == ("needs_review", ["face_uncertain", "location_mocked"])
 ```
 
 - [ ] **Step 3: Run to verify failure**
@@ -1172,8 +1173,9 @@ def test_turn_photo_of_someone_else_is_liveness_failed(api, ready):
 
 
 def test_liveness_reason_sits_between_face_and_flags(api, ready):
-    body = submit_with_turn(api, ready, lambda c: face("ravi"), selfie=face("ravi"), mock=True)
-    assert body["review_reasons"] == ["face_mismatch", "liveness_failed", "location_mocked"]
+    # selfie "asha~" is an uncertain match for the enrolled "asha" (a clear mismatch is refused: face_not_matched)
+    body = submit_with_turn(api, ready, lambda c: face("ravi"), selfie=face("asha~"), mock=True)
+    assert body["review_reasons"] == ["face_uncertain", "liveness_failed", "location_mocked"]
 ```
 
 Append to `tests/test_real_engine.py` (opt-in like the rest of that file):
@@ -1258,7 +1260,7 @@ DEFAULT_LIVENESS_FRONT_MAX_OFFSET = 0.12
 DEFAULT_LIVENESS_TURN_MIN_OFFSET = 0.25
 ```
 
-Settings fields, after `database_schema` (defaults keep `tests/conftest.py` unchanged):
+Settings fields, after `face_detect_score` (defaults keep `tests/conftest.py` unchanged):
 
 ```python
     liveness_front_max_offset: float = DEFAULT_LIVENESS_FRONT_MAX_OFFSET
@@ -1266,7 +1268,7 @@ Settings fields, after `database_schema` (defaults keep `tests/conftest.py` unch
     liveness_mirrored: bool = False
 ```
 
-In `load_settings`, after `database_schema=...`:
+In `load_settings`, after `face_detect_score=...`:
 
 ```python
         liveness_front_max_offset=float(
@@ -1278,7 +1280,7 @@ In `load_settings`, after `database_schema=...`:
         liveness_mirrored=env.get("LIVENESS_MIRRORED", "").strip().lower() in TRUE_WORDS,
 ```
 
-`backend/.env.example`, after `FACE_UNCERTAIN_MARGIN=0.1`:
+`backend/.env.example`, after the `FACE_DETECT_SCORE=0.9` line:
 
 ```
 # Head-turn check: the straight photo's nose offset must be within +/-FRONT_MAX, the turned one past TURN_MIN.
@@ -1382,7 +1384,7 @@ git commit -m "feat: check the server-chosen head turn on a second photo"
 ### Task 8: Contract addendum, openapi and fixtures
 
 **Files:**
-- Modify: `contracts/API.md` (append to the Addendum, after the "Operations" subsection), `backend/scripts/generate_fixtures.py` (`flow_fixtures`, `error_fixtures`), `integration/known-limitations.md` (append 22–25), `backend/README.md` (reset note under the seed commands)
+- Modify: `contracts/API.md` (append to the Addendum, at the end of the file, after the "Multiple venue regions" subsection), `backend/scripts/generate_fixtures.py` (`flow_fixtures`, `error_fixtures`), `integration/known-limitations.md` (append 22–25), `backend/README.md` (reset note under the seed commands)
 - Regenerate: `contracts/openapi.yaml`, `contracts/fixtures/*`
 
 **Interfaces:**
@@ -1491,21 +1493,24 @@ Add these rows to the "Extra error codes" table (after `server_error`):
 
 - [ ] **Step 2: Add the new fixtures** (`backend/scripts/generate_fixtures.py`)
 
-`new_device_key` is already imported (Task 2). In `error_fixtures`, after the `already_decided` line (student4 is not used anywhere else in this script, so its binding is free to play with):
+`new_device_key` is already imported (Task 2). The seed has only student1-3 and all three are already bound by the earlier fixtures, so the device fixtures use student2 (its token is cached, so it is unaffected by the rebinding below). In `error_fixtures`, after the `already_decided` line:
 
 ```python
     keep_error("device_key_required", client.post(f"{P}/auth/login", json={
-        "username": "student4", "password": SEED_PASSWORD}), 422)
-    keep_error("device_taken", client.post(f"{P}/auth/login", json={
-        "username": "student4", "password": SEED_PASSWORD, "device_public_key": api.keys["student1"][1]}), 403)
-    api.auth("student4")  # binds student4's own phone
+        "username": "student2", "password": SEED_PASSWORD}), 422)
     keep_error("device_mismatch", client.post(f"{P}/auth/login", json={
-        "username": "student4", "password": SEED_PASSWORD, "device_public_key": new_device_key()[1]}), 403)
+        "username": "student2", "password": SEED_PASSWORD, "device_public_key": new_device_key()[1]}), 403)
     keep("students", api.get("faculty1", "/students"), 200)
-    keep("student_device_reset", api.post("faculty1", "/students/u_s4/device/reset"), 200)
+    keep("student_device_reset", api.post("faculty1", "/students/u_s2/device/reset"), 200)
+    keep_error("device_taken", client.post(f"{P}/auth/login", json={
+        "username": "student2", "password": SEED_PASSWORD, "device_public_key": api.keys["student1"][1]}), 403)
+    client.post(f"{P}/auth/login", json={  # bind student2's own phone again
+        "username": "student2", "password": SEED_PASSWORD, "device_public_key": api.keys["student2"][1]})
 ```
 
-and before the `location_stale` line (the failed signature does not use up the attempt):
+Also in `flow_fixtures` change `face("not-rohan")` to `face("rohan~")` (the `event_needs_review` line): a clearly different face is now refused with `422 face_not_matched` and never saved, so only an uncertain face (`rohan~`) still produces a `needs_review` event. Optionally add `keep_error("face_not_matched", ...)` the same way for a wrong face on a fresh attempt.
+
+Then, before the `location_stale` line (the failed signature does not use up the attempt):
 
 ```python
     keep_error("bad_signature", api.submit("student3", fresh["id"], face("fatima2"), signature="AAAA"), 403)
@@ -1569,7 +1574,7 @@ since Task 5 its submits are refused. This task makes the script behave like the
 
 **Files:**
 - Create: `dashboard/e2e/support/canonical.ts`, `dashboard/tests/canonical.test.ts`
-- Modify: `dashboard/e2e/support/studentApi.ts` (login, createAttempt, submitAttempt, `Attempt`), `dashboard/e2e/support/backend.ts:80-86` (liveness env)
+- Modify: `dashboard/e2e/support/studentApi.ts` (login, createAttempt, submitAttempt, `Attempt`), `dashboard/e2e/support/backend.ts:78-86` (liveness env in `launchBackend`'s `env`, shared by both e2e backends)
 
 **Interfaces:**
 - Consumes: the canonical message and test vector (Global Constraints); `Attempt.nonce`
@@ -1773,7 +1778,7 @@ git commit -m "test: e2e harness binds a phone key and signs submits"
 ### Task 10: Dashboard knows the new reasons and the phone reset
 
 **Files:**
-- Modify: `dashboard/src/api/types.ts:9-13` (`ReviewReason`), `:17-22` (add `Student` after `User`), `:174` (`Api.listStudents`, add `resetDevice`); `dashboard/src/lib/labels.ts:18-23`; `dashboard/src/api/realClient.ts:97`; `dashboard/src/api/fixtureClient.ts` (`Store`, `createStore`, `listStudents`, new `resetDevice`)
+- Modify: `dashboard/src/api/types.ts:9-13` (`ReviewReason`), `:17-22` (add `Student` after `User`), `:178` (`Api.listStudents`, add `resetDevice`); `dashboard/src/lib/labels.ts:18-23`; `dashboard/src/api/realClient.ts:97`; `dashboard/src/api/fixtureClient.ts` (`Store`, `createStore`, `listStudents`, new `resetDevice`)
 - Test: `dashboard/tests/labels.test.ts:17-31` (extend), `dashboard/tests/studentsApi.test.ts` (new)
 
 **Interfaces:**
@@ -1953,7 +1958,7 @@ git commit -m "feat: dashboard labels the new review reasons and can reset a pho
 
 **Files:**
 - Create: `dashboard/src/screens/StudentsScreen.tsx`, `dashboard/tests/studentsScreen.test.tsx`
-- Modify: `dashboard/src/App.tsx:19-23` (route), `dashboard/src/components/AppShell.tsx:17-19` (nav link)
+- Modify: `dashboard/src/App.tsx:21-22` (route, after `/activities/:activityId`), `dashboard/src/components/AppShell.tsx:17-19` (nav link)
 
 **Interfaces:**
 - Consumes: `api.listStudents(): Promise<Student[]>`, `api.resetDevice(id)` (Task 10); `useLoad`, `Notice`, `Loading`, `Empty`, `messageForError`, `formatDateTime`
@@ -2191,8 +2196,8 @@ All Android commands run from `android/`. Unit tests are plain JVM tests (no Rob
 **Files:**
 - Create: `android/app/src/main/java/com/fieldpass/student/data/device/DeviceSigner.kt`, `.../data/device/KeystoreDeviceSigner.kt`, `.../data/device/CanonicalMessage.kt`
 - Create test: `android/app/src/test/java/com/fieldpass/student/data/CanonicalMessageTest.kt`
-- Modify: `.../core/model/LocationFix.kt` (`isMock`), `.../core/model/Models.kt:15` (`LoginRequest`), `.../data/repo/RealFieldPassRepository.kt:26-40`, `.../AppContainer.kt`, `.../core/error/ErrorCode.kt`, `app/src/main/res/values/strings_errors.xml`
-- Modify tests: `.../TestSupport.kt` (`SoftwareDeviceSigner`), `.../data/RealRepositoryTest.kt:36,44-50`, `.../integration/IntegrationSupport.kt:52-56`, `.../integration/BackendContractTest.kt:70,249,258`, `.../integration/TimingContractTest.kt:62`
+- Modify: `.../core/model/LocationFix.kt` (`isMock`), `.../core/model/Models.kt:15` (`LoginRequest`), `.../data/repo/RealFieldPassRepository.kt:24-35` (constructor + `login`), `.../AppContainer.kt`, `.../core/error/ErrorCode.kt`, `app/src/main/res/values/strings_errors.xml`
+- Modify tests: `.../TestSupport.kt` (`SoftwareDeviceSigner`), `.../data/RealRepositoryTest.kt:36,44-57`, `.../integration/IntegrationSupport.kt:52-56`, `.../integration/BackendContractTest.kt:70,238,285,293`, `.../integration/TimingContractTest.kt:62`
 
 **Interfaces:**
 - Consumes: canonical message + test vector (Global Constraints)
@@ -2429,7 +2434,7 @@ data class LoginRequest(
 
 `RealRepositoryTest.kt`: add a field `private val signer = SoftwareDeviceSigner()` and pass it at line 36: `RealFieldPassRepository(ApiClient.create(settings, session), session, signer)`.
 
-`IntegrationSupport.kt:52-56`: one phone per student, shared by every stack that signs in as that student:
+`IntegrationSupport.kt:52-56` (add `import com.fieldpass.student.SoftwareDeviceSigner`): one phone per student, shared by every stack that signs in as that student:
 
 ```kotlin
 /** One software "phone" per username, so a second stack for the same student is the same phone. */
@@ -2496,7 +2501,7 @@ git commit -m "feat(android): phone key in the Keystore, sent at login"
 
 **Files:**
 - Create: `.../core/model/SubmitEvidence.kt`, `.../data/device/DeviceIntegrity.kt`; test `.../test/.../data/DeviceIntegrityTest.kt`
-- Modify: `.../core/model/Enums.kt:50-55` (+`HeadTurn`), `.../core/model/Models.kt:140-147` (`Attempt`), `.../ui/StatusPresentation.kt:36-41`, `app/src/main/res/values/strings.xml:27-30`, `.../capture/FusedLocationProvider.kt:61-66`, `.../AppContainer.kt`
+- Modify: `.../core/model/Enums.kt:49-55` (+`HeadTurn`), `.../core/model/Models.kt:139-147` (`Attempt`), `.../ui/StatusPresentation.kt:36-41`, `app/src/main/res/values/strings.xml:27-30`, `.../capture/FusedLocationProvider.kt:61-66`, `.../AppContainer.kt`
 - Modify tests: `.../data/DtoSerializationTest.kt` (append)
 
 **Interfaces:**
@@ -2729,8 +2734,8 @@ git commit -m "feat(android): phone flags, head-turn field and new review reason
 ### Task 14: Android — signed submit with two photos
 
 **Files:**
-- Modify: `.../data/api/ApiService.kt:54-64`, `.../data/repo/FieldPassRepository.kt` (last method), `.../data/repo/RealFieldPassRepository.kt:67-77`, `.../data/repo/SwitchableRepository.kt:25-26`, `.../data/repo/FakeFieldPassRepository.kt:97-130`, `.../capture/CaptureState.kt`, `.../capture/AttendanceCaptureViewModel.kt`, `.../capture/CapturePhaseContent.kt:88`, `.../ui/Navigation.kt:88`
-- Modify tests: `.../TestSupport.kt:28,50-53`, `.../capture/AttendanceCaptureViewModelTest.kt:41,58-61,225` and its 5 `onSelfieCaptured` calls, `.../data/RealRepositoryTest.kt:62-78,95`, `.../integration/BackendContractTest.kt` (lines 77, 177, 186, 192, 209, 211, 273), `.../integration/TimingContractTest.kt` (lines 81, 109, 128, 141)
+- Modify: `.../data/api/ApiService.kt:54-64`, `.../data/repo/FieldPassRepository.kt` (last method), `.../data/repo/RealFieldPassRepository.kt:67-77`, `.../data/repo/SwitchableRepository.kt:25-26`, `.../data/repo/FakeFieldPassRepository.kt:97-135`, `.../capture/CaptureState.kt`, `.../capture/AttendanceCaptureViewModel.kt`, `.../capture/CapturePhaseContent.kt:88`, `.../ui/Navigation.kt:88`
+- Modify tests: `.../TestSupport.kt:28,50-53`, `.../capture/AttendanceCaptureViewModelTest.kt:41,58-61,225` and its 5 `onSelfieCaptured` calls, `.../data/RealRepositoryTest.kt:67-80,95`, `.../integration/BackendContractTest.kt` (lines 77, 177, 186, 192, 209, 211, 273), `.../integration/TimingContractTest.kt` (lines 81, 109, 128, 141)
 
 **Interfaces:**
 - Consumes: `DeviceSigner`, `canonicalMessage`, `SubmitFormat` (Task 12); `SubmitEvidence`, `DeviceFlags`, `DeviceIntegritySource`, `Attempt.nonce` (Task 13)
@@ -2805,7 +2810,7 @@ Until Task 15 adds the guided camera, the capture screen sends the one photo as 
     }
 ```
 
-(The tests in this file run on `UnconfinedTestDispatcher`, so no `runTest` is needed. The `toReady()` helper at line 62 becomes `start(); onPhotosCaptured(byteArrayOf(1, 2, 3), byteArrayOf(1, 2, 3))`. Add `import org.junit.Assert.assertArrayEquals`.)
+(The tests in this file run on `UnconfinedTestDispatcher`, so no `runTest` is needed. The `toReady()` helper at lines 63-65 becomes `start(); onPhotosCaptured(byteArrayOf(1, 2, 3), byteArrayOf(1, 2, 3))`. Add imports `org.junit.Assert.assertArrayEquals`, `com.fieldpass.student.core.model.SubmitEvidence`, `com.fieldpass.student.core.model.DeviceFlags`. The `vm()` helper at lines 58-61 uses named arguments, so add `integrity = { DeviceFlags(rooted = true, emulator = false) }` there.)
 
 - [ ] **Step 2: Run to verify failure**
 
@@ -2864,7 +2869,7 @@ Expected: FAIL — compilation errors (`SubmitEvidence` overload does not exist,
 
 `FakeFieldPassRepository`: in `createAttempt` add `nonce = "demo-nonce", challenge = if (counter % 2 == 0) HeadTurn.LEFT else HeadTurn.RIGHT,` to the `Attempt(...)`; change the submit signature to `(attempt: Attempt, evidence: SubmitEvidence)` and start the body with `val attemptId = attempt.id; val selfie = evidence.selfie; val fix = evidence.fix`, then rename the local `val attempt = attempts[attemptId] ...` to `val stored = attempts[attemptId] ...` (and its uses), so the rest of the body is unchanged.
 
-`TestSupport.kt`: `StubRepository.submitAttempt(attempt: Attempt, evidence: SubmitEvidence)`; `attempt()` adds `nonce = "n0nce", challenge = HeadTurn.LEFT`.
+`TestSupport.kt`: `StubRepository.submitAttempt(attempt: Attempt, evidence: SubmitEvidence)`; `attempt()` adds `nonce = "n0nce", challenge = HeadTurn.LEFT` (imports `SubmitEvidence`, `HeadTurn`; `LocationFix` stays, `fix()` uses it).
 
 - [ ] **Step 4: ViewModel holds two photos**
 
@@ -2890,7 +2895,7 @@ In `submit()`: add `val turnPhoto = current.turnPhoto ?: return` and call
                 val event = repository.submitAttempt(attempt, SubmitEvidence(selfie.bytes, turnPhoto.bytes, fix, integrity.flags()))
 ```
 
-Everywhere the file copies state with `selfie = null` (lines ~107, 124, 151, 189, 205, 212) also set `turnPhoto = null`. `clearSelfie()` wipes both:
+Everywhere the file copies state with `selfie = null` (lines 107, 124, 151, 190, 206, 213; line 190 is the `unusable_capture` / `multiple_faces` / `face_not_matched` retake branch of `onSubmitError`) also set `turnPhoto = null`. `clearSelfie()` wipes both:
 
 ```kotlin
     private fun clearSelfie() {
@@ -3516,12 +3521,12 @@ private fun SelfieStep(state: CaptureUiState, vm: AttendanceCaptureViewModel) {
 }
 ```
 
-Run: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease`
+Run: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease -PfieldpassApiBaseUrl=https://fieldpass.example` (release builds refuse to run without an HTTPS `fieldpassApiBaseUrl`; the value is only baked into `BuildConfig`, nothing is contacted)
 Expected: BUILD SUCCESSFUL (`assembleRelease` proves the shrinker keeps the face detector; if the release build has no signing set up on this machine and fails only for that reason, say so in the report).
 
 - [ ] **Step 8: Look at it on a real phone**
 
-Nothing above proves the camera part works — only a phone can. Install the debug APK (`./gradlew installDebug`), log in as student1 against a backend with a fresh database, start a check-in and check each line. Take a screenshot of each prompt and look at it before reporting.
+Nothing above proves the camera part works — only a phone can. Install the debug APK built for the laptop's hotspot address (`./gradlew installDebug -PfieldpassApiBaseUrl=http://<laptop-ip>:8000`; the login screen has no server field, the address is baked into `BuildConfig`, and plain `http://` works in debug builds only), log in as student1 against a backend with a fresh database, start a check-in and check each line. Take a screenshot of each prompt and look at it before reporting.
 
 1. "Look straight" → the photo is taken with no button press, the prompt changes to "blink once".
 2. Blink → the prompt changes to the turn prompt and names the side the server asked for (compare with `challenge` in the backend's `POST /attempts` response or its log).
@@ -3587,6 +3592,7 @@ Done when 6 of 6 honest check-ins have no `liveness_failed`, and these 2 cheats 
 
 Laptop hotspot on, phone joined, dashboard open as faculty1. Tick each line only after seeing it; take a dashboard screenshot at lines 3, 5 and 7 and look at them.
 
+0. Build and install the debug APK on both phones with `-PfieldpassApiBaseUrl=http://<laptop-ip>:8000` (the hotspot address; the app has no server field). Seeded names: student1 = Asha Verma, student2 = Rohan Iyer; "Arjun" and "Meena" below are the same two people in the examples.
 1. Arjun (student1) logs in on phone 1 → works. Dashboard → Students → student1 shows a linked date.
 2. Meena (student2) tries to log in on phone 1 → "This phone is already linked to another student. Each student must use their own phone."
 3. Arjun does a guided check-in at the venue → register row has no new reasons.

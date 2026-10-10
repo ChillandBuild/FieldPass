@@ -1,0 +1,37 @@
+# Render Blueprint for the FieldPass backend. Secrets (sync: false) are entered in the Render dashboard.
+# Render's disk is ephemeral on the free plan, so use Supabase Postgres (DATABASE_URL) and
+# Supabase Storage (SUPABASE_*) instead of SQLite and local photos.
+services:
+  - type: web
+    name: fieldpass-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt && python scripts/download_models.py
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PHOTO_ENCRYPTION_KEY
+        sync: false
+      - key: SEED_PASSWORD
+        sync: false
+      - key: FACULTY_SEED_PASSWORD
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_SCHEMA
+        value: fieldpass
+      - key: SUPABASE_URL
+        value: https://dmjcjiihnvdrpqyckwlu.supabase.co
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_PHOTO_BUCKET
+        value: enrollment-photos
+      - key: CORS_ORIGINS
+        sync: false
+      - key: ENABLE_DOCS
+        value: "true"
