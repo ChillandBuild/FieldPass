@@ -4,6 +4,8 @@ import android.content.Context
 import com.fieldpass.student.capture.FusedLocationProvider
 import com.fieldpass.student.capture.LocationProvider
 import com.fieldpass.student.data.api.ApiClient
+import com.fieldpass.student.data.device.BuildDeviceIntegrity
+import com.fieldpass.student.data.device.DeviceIntegritySource
 import com.fieldpass.student.data.device.KeystoreDeviceSigner
 import com.fieldpass.student.data.repo.FakeFieldPassRepository
 import com.fieldpass.student.data.repo.FieldPassRepository
@@ -26,4 +28,5 @@ class AppContainer(context: Context) {
         fake = FakeFieldPassRepository(),
     )
     val location: LocationProvider = FusedLocationProvider(appContext)
+    val integrity: DeviceIntegritySource = BuildDeviceIntegrity()
 }

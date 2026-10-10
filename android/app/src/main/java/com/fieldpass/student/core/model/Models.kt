@@ -148,6 +148,8 @@ data class Attempt(
     @SerialName("created_at") val createdAt: String,
     @SerialName("expires_at") val expiresAt: String,
     @SerialName("checkpoint_id") val checkpointId: String? = null,
+    val nonce: String = "",
+    val challenge: HeadTurn = HeadTurn.LEFT,
 )
 
 @Serializable

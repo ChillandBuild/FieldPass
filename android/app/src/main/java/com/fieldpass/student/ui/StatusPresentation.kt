@@ -38,6 +38,11 @@ object StatusPresentation {
         ReviewReason.LOCATION_OUTSIDE -> R.string.reason_location_outside
         ReviewReason.FACE_MISMATCH -> R.string.reason_face_mismatch
         ReviewReason.FACE_UNCERTAIN -> R.string.reason_face_uncertain
+        ReviewReason.LIVENESS_FAILED -> R.string.reason_liveness_failed
+        ReviewReason.LOCATION_MOCKED -> R.string.reason_location_mocked
+        ReviewReason.LOCATION_REPEATED -> R.string.reason_location_repeated
+        ReviewReason.DEVICE_ROOTED -> R.string.reason_device_rooted
+        ReviewReason.DEVICE_EMULATOR -> R.string.reason_device_emulator
     }
 
     @StringRes
