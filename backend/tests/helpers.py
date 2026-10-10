@@ -4,10 +4,12 @@ from __future__ import annotations
 import base64
 from datetime import datetime, timedelta
 
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 from app.clock import to_iso
+from app.device_keys import canonical_message
 from tests.fakes import face
 
 PASSWORD = "test-seed-password"
@@ -83,15 +85,37 @@ class Api:
             self.attempts[resp.json()["id"]] = resp.json()
         return resp
 
-    def submit(self, username: str, attempt_id: str, selfie: bytes, lat: float | None = None, lng: float | None = None,
-               accuracy: float = 10, captured_ago_s: float = 5):
-        captured = to_iso(self.clock.current - timedelta(seconds=captured_ago_s))
+    def signed_form(self, username: str, attempt_id: str, selfie: bytes, lat: float | None = None,
+                    lng: float | None = None, accuracy: float = 10, captured_ago_s: float = 5, *,
+                    turn: bytes | None = None, mock: bool = False, rooted: bool = False, emulator: bool = False,
+                    signed_lat: float | None = None, key=None, signature: str | None = None):  # noqa: ANN201
+        """The multipart body the phone sends. By default the turn photo shows the challenged pose."""
+        lat = VENUE[0] if lat is None else lat
+        lng = VENUE[1] if lng is None else lng
+        captured_at = (self.clock.current - timedelta(seconds=captured_ago_s)).replace(microsecond=0)
+        created = self.attempts.get(attempt_id, {"nonce": "", "challenge": "left"})
+        turn = selfie + b"@" + created["challenge"].encode() if turn is None else turn
+        self.auth(username)
+        private = key or self.keys.get(username, (None, None))[0]
+        if signature is None and private is not None:
+            message = canonical_message(
+                attempt_id=attempt_id, nonce=created["nonce"], selfie=selfie, turn_photo=turn,
+                lat=lat if signed_lat is None else signed_lat, lng=lng, accuracy_m=accuracy,
+                captured_at=captured_at, is_mock=mock, rooted=rooted, emulator=emulator,
+            )
+            signature = base64.b64encode(private.sign(message, ec.ECDSA(hashes.SHA256()))).decode()
         data = {
-            "lat": str(VENUE[0] if lat is None else lat), "lng": str(VENUE[1] if lng is None else lng),
-            "accuracy_m": str(accuracy), "location_captured_at": captured,
+            "lat": f"{lat:.6f}", "lng": f"{lng:.6f}", "accuracy_m": f"{accuracy:.1f}",
+            "location_captured_at": to_iso(captured_at), "location_is_mock": str(mock).lower(),
+            "device_rooted": str(rooted).lower(), "device_emulator": str(emulator).lower(),
+            "signature": signature or "AAAA",
         }
-        return self.post(username, f"/attempts/{attempt_id}/submit", data=data,
-                         files={"selfie": ("s.jpg", selfie, "image/jpeg")})
+        files = {"selfie": ("s.jpg", selfie, "image/jpeg"), "turn_photo": ("t.jpg", turn, "image/jpeg")}
+        return data, files
+
+    def submit(self, username: str, attempt_id: str, selfie: bytes, *args, **kw):
+        data, files = self.signed_form(username, attempt_id, selfie, *args, **kw)
+        return self.post(username, f"/attempts/{attempt_id}/submit", data=data, files=files)
 
     def do(self, username: str, activity_id: str, action: str, identity: str, **kw):
         """Create an attempt and submit a matching selfie; returns the submit response."""

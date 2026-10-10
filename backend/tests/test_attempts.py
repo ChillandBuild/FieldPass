@@ -222,20 +222,16 @@ def test_selfie_never_written_to_photo_dir(api, ready, settings):
 def test_concurrent_duplicate_submits_make_one_event(api, ready, app):
     attempt = api.attempt("student1", ready["id"], "check_in").json()
     headers = api.auth("student1")
+    data, files = api.signed_form("student1", attempt["id"], face("asha"), captured_ago_s=2)
     results, barrier = [], threading.Barrier(6)
 
     def worker():
         from fastapi.testclient import TestClient
-        from tests.helpers import VENUE, P
+        from tests.helpers import P
 
         with TestClient(app) as client:
             barrier.wait()
-            resp = client.post(
-                f"{P}/attempts/{attempt['id']}/submit", headers=headers,
-                data={"lat": str(VENUE[0]), "lng": str(VENUE[1]), "accuracy_m": "10",
-                      "location_captured_at": "2026-10-10T09:30:58Z"},
-                files={"selfie": ("s.jpg", face("asha"), "image/jpeg")},
-            )
+            resp = client.post(f"{P}/attempts/{attempt['id']}/submit", headers=headers, data=data, files=files)
             results.append((resp.status_code, resp.json()))
 
     threads = [threading.Thread(target=worker) for _ in range(6)]

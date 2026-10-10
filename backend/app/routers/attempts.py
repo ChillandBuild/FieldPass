@@ -8,9 +8,10 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app import clock, errors, rules
+from app import clock, devices, errors, rules
 from app.config import Settings
 from app.db import get_session
+from app.device_keys import canonical_message, verify_signature
 from app.deps import get_face_engine, get_photo_store
 from app.face import FaceEngine
 from app.geo import regions_verdict
@@ -127,6 +128,15 @@ def _persist(session: Session, event: AttendanceEvent, enrollment_id: str) -> At
     return event
 
 
+def _require_signed(session: Session, attempt: Attempt, message: bytes, signature: str) -> None:
+    """The submit must be signed by the phone bound to this student (reset since the attempt: mismatch)."""
+    key = devices.bound_key(session, attempt.student_id)
+    if key is None:
+        raise errors.device_mismatch()
+    if not verify_signature(key, message, signature):
+        raise errors.bad_signature()
+
+
 @router.post("/attempts/{attempt_id}/submit", response_model=AttendanceEventOut)
 def submit_attempt(
     attempt_id: str,
@@ -135,6 +145,11 @@ def submit_attempt(
     lng: float = Form(..., ge=-180, le=180),
     accuracy_m: float = Form(..., ge=0, le=100000),
     location_captured_at: datetime = Form(...),
+    turn_photo: UploadFile = File(...),
+    location_is_mock: bool = Form(...),
+    device_rooted: bool = Form(...),
+    device_emulator: bool = Form(...),
+    signature: str = Form(..., min_length=1, max_length=200),
     student: User = Depends(require_student),
     session: Session = Depends(get_session),
     settings: Settings = Depends(get_settings_dep),
@@ -153,11 +168,19 @@ def submit_attempt(
     if now > attempt.expires_at:
         raise errors.attempt_expired()
     captured = clock.parse_iso(location_captured_at.isoformat())
+    selfie_bytes = read_image(selfie)
+    turn_bytes = read_image(turn_photo)
+    message = canonical_message(
+        attempt_id=attempt.id, nonce=attempt.nonce, selfie=selfie_bytes, turn_photo=turn_bytes,
+        lat=lat, lng=lng, accuracy_m=accuracy_m, captured_at=captured,
+        is_mock=location_is_mock, rooted=device_rooted, emulator=device_emulator,
+    )
+    _require_signed(session, attempt, message, signature)
     age_seconds = (now - captured).total_seconds()
     if age_seconds > settings.location_max_age_seconds or age_seconds < -LOCATION_FUTURE_TOLERANCE_SECONDS:
         raise errors.location_stale()
-    # Selfie bytes stay in memory only; they are never written anywhere by this code.
-    analysis = require_one_face(engine, read_image(selfie))
+    # Photo bytes stay in memory only; they are never written anywhere by this code.
+    analysis = require_one_face(engine, selfie_bytes)
     activity = get_activity(session, attempt.activity_id)
     enrollment = _approved_enrollment(session, student.id)
     events, windows = _student_state(session, activity.id, student.id)
