@@ -6,6 +6,7 @@ No migration tool. Schema is created by `create_all` at startup (SQLite and Post
 | date | change |
 |---|---|
 | 2026-10-10 | Optional Postgres (Supabase) backend added, commit bc893ee. Schema `fieldpass`, RLS on, anon/authenticated revoked. |
+| 2026-10-11 | Anti-cheat A: new columns `attempts.nonce`, `attempts.challenge`, `attendance_events.location_fingerprint` (new table `student_devices`). Existing DBs need reset or `ALTER TABLE` (statements in `contracts/API.md`). |
 
 ## Decisions
 | date | decision | why | rejected |

@@ -6,12 +6,12 @@ from fastapi.openapi.utils import get_openapi
 
 ERROR_DESCRIPTIONS = {
     "401": "not_authenticated or invalid_credentials",
-    "403": "forbidden or not_assigned",
+    "403": "forbidden, not_assigned, device_mismatch, device_taken or bad_signature",
     "404": "not_found",
     "409": "enrollment_not_approved, outside_activity_window, invalid_action_order, checkpoint_not_open, already_decided",
     "410": "attempt_expired",
     "413": "image_too_large",
-    "422": "validation_error, unusable_capture, multiple_faces, location_stale",
+    "422": "validation_error, unusable_capture, multiple_faces, location_stale, device_key_required, face_not_matched",
 }
 
 
@@ -37,7 +37,7 @@ def _error_codes(path: str) -> list[str]:
     if path.endswith("/health"):
         return []
     if path.endswith("/auth/login"):
-        return ["401", "422", "429"]
+        return ["401", "403", "422", "429"]
     return ["401", "403", "404", "409", "410", "413", "422"]
 
 

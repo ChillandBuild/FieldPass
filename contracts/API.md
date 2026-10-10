@@ -263,6 +263,7 @@ mention. Where it differs from the text above, this addendum describes what the 
 | 422 | `device_key_required` | Student login without `device_public_key` |
 | 403 | `device_mismatch` | Student login or submit from a phone other than the bound one |
 | 403 | `device_taken` | The phone's key is already bound to another student |
+| 422 | `face_not_matched` | Submit: the selfie is clearly a different face than the enrolled photo. Nothing is recorded and the attempt stays open |
 | 403 | `bad_signature` | Submit signature does not verify against the bound phone's key |
 
 - `413 image_too_large` is returned for any oversized request body, not only photos. A multipart upload body over
@@ -337,6 +338,7 @@ They do not change the `v1` paths.
 **Phone lock.** `POST /auth/login` takes an extra field `device_public_key` (string, at most 512 characters):
 Base64 of the DER `SubjectPublicKeyInfo` of an EC P-256 key held in the phone's Android Keystore.
 
+- A malformed `device_public_key` (not valid Base64 DER EC P-256) is `422 validation_error`. The `signature` part must be 1 to 200 characters.
 - Student login without it: `422 device_key_required`. Faculty logins ignore it.
 - First student login binds the key to the student. Later logins must send the same key, otherwise
   `403 device_mismatch`. A key already bound to another student: `403 device_taken`.
@@ -399,6 +401,9 @@ df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c
 
 - No phone bound for the student (reset after the attempt was created): `403 device_mismatch`.
   Signature does not verify: `403 bad_signature`. Both are checked before `location_stale`.
+- **One-photo fallback.** The Android "Take one photo instead" path sends the same photo bytes as both `selfie` and
+  `turn_photo`. The server accepts this (it is never refused); the event is `needs_review` with `liveness_failed`,
+  so nobody is locked out and faculty decide.
 - Submitting an attempt that already has an event returns that event without checking the new signature
   (a phone that lost the response can safely retry).
 
@@ -411,6 +416,10 @@ df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c
 | `location_repeated` | the exact same lat/lng (6 decimals) as an earlier event of this student in this activity. Only a hash of the coordinates is kept |
 | `device_rooted` | `device_rooted` was `true` |
 | `device_emulator` | `device_emulator` was `true` |
+
+**Face verdict update.** A clearly different face is refused with `422 face_not_matched` (see Extra error codes) and no
+event is saved, so `no_match` / `face_mismatch` no longer reach a saved event. The frozen v1 lines above that still say
+`no_match` (+ `face_mismatch`) are superseded by this. Only `match` and `uncertain` (+ `face_uncertain`) events exist.
 
 Order inside `review_reasons`: location verdict, face, `liveness_failed`, `location_mocked`, `location_repeated`,
 `device_rooted`, `device_emulator`.
@@ -430,4 +439,4 @@ ALTER TABLE fieldpass.attendance_events ADD COLUMN location_fingerprint VARCHAR 
 ```
 
 SQLite uses the same statements without the `fieldpass.` prefix. The `student_devices` table is new and is
-created automatically. Old attempts get an empty nonce and can no longer be submitted (they have expired anyway).
+created automatically. Old attempts get an empty nonce; the server does not reject that, but attempts expire after about 90 seconds, so none is still open when the new version starts.
