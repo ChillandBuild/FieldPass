@@ -29,6 +29,14 @@ class UserOut(BaseModel):
     role: Role
 
 
+class StudentOut(UserOut):
+    device_bound_at: str | None
+
+
+class StudentList(BaseModel):
+    items: list[StudentOut]
+
+
 class LoginOut(BaseModel):
     access_token: str
     token_type: Literal["bearer"] = "bearer"
