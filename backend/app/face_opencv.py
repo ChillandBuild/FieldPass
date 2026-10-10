@@ -55,12 +55,12 @@ def _to_jpeg(img: Image.Image) -> bytes:
 
 
 class OpenCVFaceEngine:
-    def __init__(self, model_dir: Path, threshold: float, margin: float) -> None:
+    def __init__(self, model_dir: Path, threshold: float, margin: float, detect_score: float = DETECT_SCORE) -> None:
         self._threshold = threshold
         self._margin = margin
         self._lock = threading.Lock()  # cv2.dnn nets are not thread-safe
         self._detector = cv2.FaceDetectorYN.create(
-            str(model_dir / DETECTOR_FILE), "", (320, 320), DETECT_SCORE, 0.3, 50
+            str(model_dir / DETECTOR_FILE), "", (320, 320), detect_score, 0.3, 50
         )
         self._recognizer = cv2.FaceRecognizerSF.create(str(model_dir / RECOGNIZER_FILE), "")
 

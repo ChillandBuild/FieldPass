@@ -9,7 +9,7 @@ from starlette.formparsers import MultiPartParser
 
 from app.body_limit import MAX_UPLOAD_BODY_BYTES, BodyLimitMiddleware
 from app.config import ConfigError, Settings, get_settings
-from app.db import create_all, make_engine, make_session_factory
+from app.db import create_all, engine_for, make_session_factory
 from app.errors import install_error_handlers
 from app.openapi_doc import install_openapi
 from app.face import FaceEngine
@@ -32,7 +32,10 @@ def _build_engine(settings: Settings) -> FaceEngine:
         raise ConfigError(
             f"Face models not found in {settings.model_dir}. Run: python scripts/download_models.py"
         )
-    return OpenCVFaceEngine(settings.model_dir, settings.face_match_threshold, settings.face_uncertain_margin)
+    return OpenCVFaceEngine(
+        settings.model_dir, settings.face_match_threshold, settings.face_uncertain_margin,
+        settings.face_detect_score,
+    )
 
 
 def create_app(
@@ -41,7 +44,7 @@ def create_app(
     """Build the app. Raises ConfigError right away when secrets or models are missing."""
     settings = settings or get_settings()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
-    engine = make_engine(settings.database_path)
+    engine = engine_for(settings)
     create_all(engine)
 
     # Interactive docs and the openapi route are off unless ENABLE_DOCS is set. app.openapi() still works
@@ -53,7 +56,7 @@ def create_app(
     app.state.settings = settings
     app.state.engine = engine
     app.state.session_factory = make_session_factory(engine)
-    app.state.photo_store = PhotoStore(settings.photo_dir, settings.photo_encryption_key)
+    app.state.photo_store = PhotoStore.from_settings(settings)
     app.state.rate_limiter = LoginRateLimiter()
     app.state.face_engine = face_engine or (_build_engine(settings) if require_models else None)
 

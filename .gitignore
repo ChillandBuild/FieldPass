@@ -5,6 +5,7 @@
 *.sqlite3
 backend/data/
 backend/models/*.onnx
+test-photos/
 
 # python
 .venv/

@@ -88,10 +88,12 @@ class AttendanceEvent(Base):
         Index(
             "uq_one_checkin_checkout", "activity_id", "student_id", "action", unique=True,
             sqlite_where=text("action IN ('check_in', 'check_out')"),
+            postgresql_where=text("action IN ('check_in', 'check_out')"),
         ),
         Index(
             "uq_one_answer_per_window", "activity_id", "student_id", "checkpoint_id", unique=True,
             sqlite_where=text("action = 'checkpoint'"),
+            postgresql_where=text("action = 'checkpoint'"),
         ),
     )
     id: Mapped[str] = mapped_column(String, primary_key=True)

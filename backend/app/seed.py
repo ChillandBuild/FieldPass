@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app import clock
 from app.config import ConfigError, Settings, get_settings
-from app.db import create_all, make_engine, make_session_factory
+from app.db import create_all, engine_for, make_session_factory
 from app.models import Activity, RosterEntry, User, new_id
 from app.security import hash_password, verify_password
 
@@ -70,7 +70,7 @@ def check_passwords(settings: Settings) -> None:
 
 def run(settings: Settings, demo: tuple[float, float] | None) -> None:
     check_passwords(settings)
-    engine = make_engine(settings.database_path)
+    engine = engine_for(settings)
     create_all(engine)
     with make_session_factory(engine)() as session:
         created = seed_users(session, settings.seed_password, settings.faculty_seed_password)

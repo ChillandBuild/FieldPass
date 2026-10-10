@@ -15,6 +15,7 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 # (`double cosine_similar_thresh = 0.363;`), also used by opencv_zoo's sface.py.
 DEFAULT_FACE_MATCH_THRESHOLD = 0.363
 DEFAULT_FACE_UNCERTAIN_MARGIN = 0.1
+DEFAULT_FACE_DETECT_SCORE = 0.9
 
 REQUIRED_SECRETS = ("JWT_SECRET", "PHOTO_ENCRYPTION_KEY", "SEED_PASSWORD", "FACULTY_SEED_PASSWORD")
 MIN_JWT_SECRET_CHARS = 32
@@ -41,6 +42,14 @@ class Settings:
     location_max_age_seconds: int
     token_ttl_minutes: int
     enable_docs: bool = False
+    # Supabase (all optional). With DATABASE_URL set, Postgres replaces SQLite; with the
+    # SUPABASE_* pair set, encrypted photos go to a private Storage bucket instead of disk.
+    database_url: str = ""
+    supabase_url: str = ""
+    supabase_service_key: str = ""
+    photo_bucket: str = "enrollment-photos"
+    # Minimum YuNet confidence for a face to count. Lower is more forgiving of close-up or dim selfies.
+    face_detect_score: float = DEFAULT_FACE_DETECT_SCORE
 
 
 def _read_env_file(path: Path) -> dict[str, str]:
@@ -113,6 +122,11 @@ def load_settings(env_file: Path | None = None, environ: dict[str, str] | None =
         location_max_age_seconds=int(_number(env, "LOCATION_MAX_AGE_SECONDS", 60, int)),
         token_ttl_minutes=int(_number(env, "TOKEN_TTL_MINUTES", 480, int)),
         enable_docs=env.get("ENABLE_DOCS", "").strip().lower() in TRUE_WORDS,
+        database_url=env.get("DATABASE_URL", "").strip(),
+        supabase_url=env.get("SUPABASE_URL", "").strip().rstrip("/"),
+        supabase_service_key=env.get("SUPABASE_SERVICE_KEY", "").strip(),
+        photo_bucket=env.get("SUPABASE_PHOTO_BUCKET", "").strip() or "enrollment-photos",
+        face_detect_score=float(_number(env, "FACE_DETECT_SCORE", DEFAULT_FACE_DETECT_SCORE, float)),
     )
 
 

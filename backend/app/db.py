@@ -53,6 +53,23 @@ def make_engine(database_path: Path | str) -> Engine:
     return engine
 
 
+def make_postgres_engine(database_url: str) -> Engine:
+    """Engine for Supabase Postgres. Use the pooler (session mode) URL from the dashboard."""
+    url = database_url
+    # SQLAlchemy needs the explicit psycopg driver name; Supabase hands out plain postgresql://.
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            url = "postgresql+psycopg://" + url[len(prefix):]
+            break
+    return create_engine(url, pool_pre_ping=True, pool_size=5, max_overflow=5)
+
+
+def engine_for(settings) -> Engine:  # noqa: ANN001  (Settings; avoids a circular import)
+    if settings.database_url:
+        return make_postgres_engine(settings.database_url)
+    return make_engine(settings.database_path)
+
+
 def create_all(engine: Engine) -> None:
     from app import models  # noqa: F401  (register tables)
 
