@@ -19,7 +19,12 @@ def main(paths: list[str]) -> None:
     engine = OpenCVFaceEngine(BACKEND_DIR / "models", threshold=0.363, margin=0.1)
     for path in paths:
         analysis = engine.analyze(Path(path).read_bytes())
-        shown = "no single face" if analysis.count != 1 else f"{analysis.nose_offset:+.2f}"
+        if analysis.count != 1:
+            shown = "no single face"
+        elif analysis.nose_offset is None:
+            shown = "no usable landmarks"
+        else:
+            shown = f"{analysis.nose_offset:+.2f}"
         print(f"{path}: {shown}")
 
 

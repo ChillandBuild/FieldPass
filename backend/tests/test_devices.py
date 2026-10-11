@@ -24,7 +24,9 @@ def test_other_phone_is_device_mismatch(client):
     _, first = new_device_key()
     _, second = new_device_key()
     login(client, "student1", first)
-    assert code(login(client, "student1", second)) == (403, "device_mismatch")
+    resp = login(client, "student1", second)
+    assert code(resp) == (403, "device_mismatch")
+    assert "linked to another phone" in resp.json()["error"]["message"]
 
 
 def test_phone_of_another_student_is_device_taken(client):

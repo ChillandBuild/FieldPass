@@ -47,7 +47,10 @@ def test_flag_flipped_after_signing_is_bad_signature(api, ready):
 def test_submit_after_device_reset_is_device_mismatch(api, ready):
     attempt_id = new_attempt(api, ready)
     api.post("faculty1", "/students/u_s1/device/reset")
-    assert err(api.submit("student1", attempt_id, face("asha"))) == (403, "device_mismatch")
+    resp = api.submit("student1", attempt_id, face("asha"))
+    assert err(resp) == (403, "device_mismatch")
+    # no phone is bound at all, so the message says to sign in again on this phone (not "linked to another phone")
+    assert "Sign in again on this phone" in resp.json()["error"]["message"]
 
 
 def test_resubmit_returns_saved_event_without_new_signature(api, ready):

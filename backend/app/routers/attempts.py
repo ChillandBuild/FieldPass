@@ -155,7 +155,7 @@ def _require_signed(session: Session, attempt: Attempt, message: bytes, signatur
     """The submit must be signed by the phone bound to this student (reset since the attempt: mismatch)."""
     key = devices.bound_key(session, attempt.student_id)
     if key is None:
-        raise errors.device_mismatch()
+        raise errors.device_not_bound()
     if not verify_signature(key, message, signature):
         raise errors.bad_signature()
 
