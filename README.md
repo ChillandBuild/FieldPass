@@ -13,8 +13,12 @@ It is a prototype. It has been built and tested for a demo, not for real attenda
 
 Read this before you present or use it.
 
-- **A camera selfie is not liveness detection.** The app takes the photo with the camera, but the
-  backend cannot tell a live face from a photo of a photo. A printed or on-screen picture may pass.
+- **The head-turn check is a speed bump, not liveness detection.** The app asks for a blink and a head
+  turn to a side the server picks, and the server checks the second photo. A printed photo cannot turn,
+  but a replayed video with the right turn can pass. A failed check is only a reason for faculty to look.
+  Its thresholds have not been calibrated on a real phone yet (see `.agents/projects/active-backlog.md`).
+- **The phone lock and the fake-GPS, rooted and emulator flags come from the phone.** One student is tied
+  to one phone and every check-in is signed by it, but a modified app on a rooted phone can lie about the flags.
 - **Location is reported by the phone and can be manipulated.** The accuracy figure is also reported
   by the phone. Indoors it can be off by tens of metres.
 - **Recorded times are points of observation, not continuous presence.** A check-in at 09:31 and a
@@ -129,6 +133,12 @@ Then download the face models, create the accounts, and start the server:
 .venv/bin/python -m app.seed                     # demo accounts (safe to run again)
 ./run.sh                                         # listens on 0.0.0.0:8000. Another port: ./run.sh 8002
 ```
+
+After pulling a version that adds database columns (the phone lock did), start from a new database file:
+move the old `DATABASE_PATH` file away and run the seed command again. There is no migration tool.
+An existing Postgres/Supabase database is not touched by this: add the new tables and columns by hand
+(the three `ALTER TABLE` statements are in [contracts/API.md](contracts/API.md)) before deploying, because
+`create_all` does not add columns to existing tables.
 
 The first start in a new virtual environment was slow when checked on 2026-10-10: about 45 seconds before the
 terminal showed `Application startup complete.` and `Uvicorn running on http://0.0.0.0:8000`. Until then,
