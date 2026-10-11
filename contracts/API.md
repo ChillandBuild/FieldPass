@@ -36,6 +36,8 @@ Every non-2xx response has this body:
 | 409 | `outside_activity_window` | Activity is not open for this action right now |
 | 409 | `invalid_action_order` | e.g. check-out before check-in, second check-in |
 | 409 | `checkpoint_not_open` | No open checkpoint window, or already answered this one |
+| 409 | `activity_locked` | Edit refused: the activity's start day has begun (edits close at midnight campus time the day before) |
+| 409 | `activity_has_attendance` | Delete refused: the activity already has attendance records |
 | 409 | `already_decided` | Enrollment already approved/rejected |
 | 410 | `attempt_expired` | Attempt older than 90 s and never successfully submitted |
 | 413 | `image_too_large` | Photo over 5 MB |
@@ -209,6 +211,8 @@ checkpoint window; check-out from the check-in until `ends_at + 30 min`.
 | POST | `/activities` | faculty | `{"name", "venue_name", "venue_lat", "venue_lng", "radius_m" (default 100, 0–5000), "starts_at", "ends_at", "student_ids": [...]}` | `201 Activity` |
 | GET | `/activities` | any | — | `{"items": [Activity]}`. Student: assigned activities only, with `my_attendance`. Faculty: all |
 | GET | `/activities/{id}` | any | — | `Activity` (student must be on the roster) |
+| PUT | `/activities/{id}` | faculty | Same body as `POST /activities`. Replaces the details, venue regions and roster; checkpoint windows are untouched | `200 Activity`. `409 activity_locked` once the campus-local day of the activity's start has begun (edits close at 00:00 the day it starts, offset `CAMPUS_UTC_OFFSET_MINUTES`, default 330 = IST). `422 validation_error` if the new `starts_at` is not on a later day than today, or for an unknown student. `404 not_found` |
+| DELETE | `/activities/{id}` | faculty | — | `204`, no body. Removes the activity, its roster, checkpoint windows and venue regions. `409 activity_has_attendance` if it has any attempt, check-in, decision or observation; nothing changes then. `404 not_found` |
 | GET | `/activities/{id}/roster` | faculty | — | `{"items": [User]}` |
 | POST | `/activities/{id}/checkpoints` | faculty | `{"duration_minutes": 10}` (1–60, default 10) | `201 CheckpointWindow`. `409 checkpoint_not_open` is NOT used here; opening while one is open returns `409 invalid_action_order` |
 
@@ -409,9 +413,11 @@ df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c
 
 - No phone bound for the student (reset after the attempt was created): `403 device_mismatch`.
   Signature does not verify: `403 bad_signature`. Both are checked before `location_stale`.
-- **One-photo fallback.** The Android "Take one photo instead" path sends the same photo bytes as both `selfie` and
-  `turn_photo`. The server accepts this (it is never refused); the event is `needs_review` with `liveness_failed`,
-  so nobody is locked out and faculty decide.
+- **One photo.** The Android app takes a single photo and sends the same bytes as both `selfie` and `turn_photo`;
+  there is no head-turn step. With `LIVENESS_REQUIRED=true` (the server default) the server compares the two photos,
+  so a one-photo check-in is `needs_review` with `liveness_failed` and faculty decide. With `LIVENESS_REQUIRED=false`
+  (set for the demo) the head-turn check is skipped: the event is judged on face and location only and
+  `liveness_failed` is never produced. Nobody is refused either way.
 - Submitting an attempt that already has an event returns that event without checking the new signature
   (a phone that lost the response can safely retry).
 
@@ -444,6 +450,7 @@ the seed commands again) or by adding the columns in place. Postgres (schema `fi
 ALTER TABLE fieldpass.attempts ADD COLUMN nonce VARCHAR NOT NULL DEFAULT '';
 ALTER TABLE fieldpass.attempts ADD COLUMN challenge VARCHAR NOT NULL DEFAULT 'left';
 ALTER TABLE fieldpass.attendance_events ADD COLUMN location_fingerprint VARCHAR NULL;
+ALTER TABLE fieldpass.attendance_events ADD COLUMN face_score DOUBLE PRECISION NULL;
 ```
 
 SQLite uses the same statements without the `fieldpass.` prefix. The `student_devices` table is new and is

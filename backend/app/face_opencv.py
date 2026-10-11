@@ -89,9 +89,11 @@ class OpenCVFaceEngine:
         embedding = np.asarray(feature, dtype=np.float32).reshape(1, -1).tobytes()
         return FaceAnalysis(count=1, embedding=embedding, normalized_jpeg=_to_jpeg(img), nose_offset=offset)
 
-    def compare(self, enrolled: bytes, probe: bytes) -> str:
+    def similarity(self, enrolled: bytes, probe: bytes) -> float:
         a = np.frombuffer(enrolled, dtype=np.float32).reshape(1, -1).copy()
         b = np.frombuffer(probe, dtype=np.float32).reshape(1, -1).copy()
         with self._lock:
-            score = float(self._recognizer.match(a, b, cv2.FaceRecognizerSF_FR_COSINE))
-        return verdict_from_score(score, self._threshold, self._margin)
+            return float(self._recognizer.match(a, b, cv2.FaceRecognizerSF_FR_COSINE))
+
+    def compare(self, enrolled: bytes, probe: bytes) -> str:
+        return verdict_from_score(self.similarity(enrolled, probe), self._threshold, self._margin)

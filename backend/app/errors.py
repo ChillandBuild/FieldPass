@@ -55,6 +55,18 @@ def checkpoint_not_open() -> ApiError:
     return ApiError(409, "checkpoint_not_open", "There is no open checkpoint for you to answer.")
 
 
+def activity_locked() -> ApiError:
+    return ApiError(409, "activity_locked", "This activity can only be edited up to the day before it starts.")
+
+
+def activity_has_attendance() -> ApiError:
+    return ApiError(409, "activity_has_attendance", "This activity has attendance records and cannot be deleted.")
+
+
+def already_enrolled() -> ApiError:
+    return ApiError(409, "already_enrolled", "This student already has an enrollment photo.")
+
+
 def already_decided() -> ApiError:
     return ApiError(409, "already_decided", "This enrollment has already been decided.")
 

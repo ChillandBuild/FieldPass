@@ -64,6 +64,7 @@ fun AppNavigation(
                 openPhotoRequested = openPhoto,
                 onOpenPhotoHandled = { entry.savedStateHandle[KEY_OPEN_PHOTO] = false },
                 onOpenActivity = { navController.navigate(Routes.detail(it)) },
+                onStartAction = { activityId, action -> navController.navigate(Routes.capture(activityId, action)) },
                 onSignOut = onSignOut,
             )
         }

@@ -22,13 +22,13 @@ import type {
 const KNOWN_CODES: readonly string[] = [
   'invalid_credentials', 'not_authenticated', 'forbidden', 'not_assigned', 'not_found',
   'enrollment_not_approved', 'outside_activity_window', 'invalid_action_order',
-  'checkpoint_not_open', 'already_decided', 'attempt_expired', 'image_too_large',
+  'checkpoint_not_open', 'already_decided', 'already_enrolled','attempt_expired', 'image_too_large',
   'validation_error', 'unusable_capture', 'multiple_faces', 'location_stale',
   'device_key_required',
 ]
 
 interface RequestOptions {
-  method?: 'GET' | 'POST'
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
   body?: unknown
   form?: FormData
   auth?: boolean
@@ -107,6 +107,11 @@ export const realApi: Api = {
   listActivities: async () => (await json<{ items: Activity[] }>('/activities')).items,
   getActivity: (id) => json<Activity>(`/activities/${encodeURIComponent(id)}`),
   createActivity: (input: CreateActivityInput) => json<Activity>('/activities', { method: 'POST', body: input }),
+  updateActivity: (id, input: CreateActivityInput) =>
+    json<Activity>(`/activities/${encodeURIComponent(id)}`, { method: 'PUT', body: input }),
+  deleteActivity: async (id) => {
+    await send(`/activities/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  },
   openCheckpoint: (activityId, durationMinutes) =>
     json<CheckpointWindow>(`/activities/${encodeURIComponent(activityId)}/checkpoints`, {
       method: 'POST',

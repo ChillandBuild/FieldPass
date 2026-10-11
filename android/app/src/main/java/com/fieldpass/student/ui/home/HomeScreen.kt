@@ -1,23 +1,26 @@
 package com.fieldpass.student.ui.home
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
 import com.fieldpass.student.ui.RefreshOnReturn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -37,6 +40,7 @@ import com.fieldpass.student.AppContainer
 import com.fieldpass.student.R
 import com.fieldpass.student.activities.ActivitiesScreen
 import com.fieldpass.student.activities.ActivitiesViewModel
+import com.fieldpass.student.core.model.Action
 import com.fieldpass.student.enrollment.EnrollmentScreen
 import com.fieldpass.student.enrollment.EnrollmentViewModel
 import com.fieldpass.student.history.HistoryScreen
@@ -50,11 +54,11 @@ private enum class Tab(val labelRes: Int, val icon: ImageVector) {
 }
 
 /** Signed-in home: bottom tabs for activities, history and the enrolment photo. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     container: AppContainer,
     onOpenActivity: (String) -> Unit,
+    onStartAction: (activityId: String, action: Action) -> Unit,
     onSignOut: () -> Unit,
     openPhotoRequested: Boolean = false,
     onOpenPhotoHandled: () -> Unit = {},
@@ -76,19 +80,28 @@ fun HomeScreen(
         history.refresh()
     }
 
+    // The activities tab is a white page with a tinted card; the other tabs keep white cards on the tinted page.
+    val pageColor = if (Tab.entries[selected] == Tab.ACTIVITIES) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.background
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = pageColor,
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        BrandMark(size = 36.dp)
-                        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
-                actions = { TextButton(onClick = onSignOut) { Text(stringResource(R.string.action_sign_out)) } },
-            )
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .background(pageColor)
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(start = 24.dp, top = 16.dp, end = 12.dp, bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    BrandMark(size = 48.dp)
+                    Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge)
+                }
+                TextButton(onClick = onSignOut, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant)) {
+                    Text(stringResource(R.string.action_sign_out))
+                }
+            }
         },
         bottomBar = {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
@@ -113,7 +126,7 @@ fun HomeScreen(
     ) { padding ->
         val body = Modifier.padding(padding)
         when (Tab.entries[selected]) {
-            Tab.ACTIVITIES -> ActivitiesScreen(activities, onOpenActivity, onOpenPhoto = { selected = Tab.PHOTO.ordinal }, modifier = body)
+            Tab.ACTIVITIES -> ActivitiesScreen(activities, onOpenActivity, onStartAction, onOpenPhoto = { selected = Tab.PHOTO.ordinal }, modifier = body)
             Tab.HISTORY -> HistoryScreen(history, body)
             Tab.PHOTO -> EnrollmentScreen(enrollment, body)
         }

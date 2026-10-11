@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import secrets
 from datetime import datetime, timedelta
 
@@ -22,6 +23,8 @@ from app.routers.enrollment import read_image, require_one_face
 from app.schemas import AttemptIn, AttemptOut, AttendanceEventOut
 from app.security import get_settings_dep, require_student
 from app.views import event_out
+
+log = logging.getLogger("fieldpass")
 
 router = APIRouter(tags=["attempts"])
 
@@ -106,7 +109,7 @@ def _integrity_reasons(is_mock: bool, rooted: bool, emulator: bool, repeated: bo
 
 def _build_event(
     attempt: Attempt, activity: Activity, now: datetime, loc: tuple[str, int, int, datetime], face: str,
-    extra_reasons: list[str], fingerprint: str | None,
+    extra_reasons: list[str], fingerprint: str | None, face_score: float | None = None,
 ) -> AttendanceEvent:
     loc_verdict, distance, accuracy, captured = loc
     reasons = []
@@ -120,7 +123,7 @@ def _build_event(
         action=attempt.action, status="recorded" if not reasons else "needs_review", received_at=now,
         checkpoint_id=attempt.checkpoint_id, review_reasons=",".join(reasons), location_verdict=loc_verdict,
         distance_m=distance, accuracy_m=accuracy, captured_at=captured, face_verdict=face,
-        location_fingerprint=fingerprint,
+        location_fingerprint=fingerprint, face_score=face_score,
     )
 
 
@@ -225,12 +228,17 @@ def submit_attempt(
     verdict, distance = regions_verdict(lat, lng, accuracy_m, regions or [(activity.venue_lat, activity.venue_lng, activity.radius_m)])
     loc = (verdict, round(distance), round(accuracy_m), captured)
     face = _face_verdict(engine, store, enrollment, analysis.embedding or b"")
+    face_score = engine.similarity(store.decrypt(enrollment.embedding_enc), analysis.embedding or b"")
+    log.info("face score=%.3f verdict=%s student=%s", face_score, face, student.id)
     if face == "no_match":
         # A clearly different face is refused outright: nothing is saved and the attempt stays open.
         raise errors.face_not_matched()
     fingerprint = location_fingerprint(lat, lng)
     repeated = any(e.location_fingerprint == fingerprint for e in events)
-    extra = _liveness_reasons(engine, analysis, turn_bytes, attempt.challenge, liveness.limits_from(settings))
+    extra = (
+        _liveness_reasons(engine, analysis, turn_bytes, attempt.challenge, liveness.limits_from(settings))
+        if settings.liveness_required else []
+    )
     extra += _integrity_reasons(location_is_mock, device_rooted, device_emulator, repeated)
-    saved = _persist(session, _build_event(attempt, activity, now, loc, face, extra, fingerprint), enrollment.id)
+    saved = _persist(session, _build_event(attempt, activity, now, loc, face, extra, fingerprint, face_score), enrollment.id)
     return event_out(saved)

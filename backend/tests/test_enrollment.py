@@ -157,12 +157,19 @@ def test_faculty_upload_still_needs_a_separate_approval(api):
     assert resp.json()["status"] == "approved" and resp.json()["decided_by"] == "Dr. Meera Rao"
 
 
-def test_faculty_upload_replaces_an_earlier_photo(api):
+def test_faculty_upload_is_refused_when_a_photo_already_exists(api):
     sid = student_id_of(api, "student1")
-    upload(api, "student1", face("asha"))
-    second = faculty_upload(api, sid, face("asha2")).json()
-    items = api.get("faculty1", "/enrollments").json()["items"]
-    assert [e["id"] for e in items] == [second["id"]]
+    first = upload(api, "student1", face("asha")).json()
+    resp = faculty_upload(api, sid, face("asha2"))
+    assert resp.status_code == 409 and resp.json()["error"]["code"] == "already_enrolled"
+    assert [e["id"] for e in api.get("faculty1", "/enrollments").json()["items"]] == [first["id"]]
+
+
+def test_faculty_upload_is_refused_even_after_rejection(api):
+    sid = student_id_of(api, "student1")
+    first = upload(api, "student1", face("asha")).json()
+    api.post("faculty1", f"/enrollments/{first['id']}/reject", json={"reason": "blurry"})
+    assert faculty_upload(api, sid, face("asha2")).status_code == 409
 
 
 def test_student_cannot_use_the_faculty_upload(api):

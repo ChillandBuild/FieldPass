@@ -192,6 +192,10 @@ export interface Api {
   listActivities(): Promise<Activity[]>
   getActivity(id: string): Promise<Activity>
   createActivity(input: CreateActivityInput): Promise<Activity>
+  /** Replaces the activity's details and roster. Allowed up to the day before it starts. */
+  updateActivity(id: string, input: CreateActivityInput): Promise<Activity>
+  /** Only works while the activity has no attendance records. */
+  deleteActivity(id: string): Promise<void>
   openCheckpoint(activityId: string, durationMinutes: number): Promise<CheckpointWindow>
   getRegister(activityId: string): Promise<Register>
   decide(activityId: string, studentId: string, input: DecisionInput): Promise<AttendanceRecord>

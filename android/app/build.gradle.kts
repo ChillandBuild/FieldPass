@@ -49,6 +49,16 @@ if (!releaseSigningConfigured && signingValues.values.any { it != null }) {
             signingValues.filterValues { it == null }.keys.joinToString(", ")
     )
 }
+// The app version is derived from git: the number of commits that touched android/. Any committed app edit bumps it,
+// every clone at the same commit builds the same version, and nobody edits a version line (so no merge conflicts).
+// Falls back to 1 when git is unavailable (e.g. a source zip without .git).
+val appCommitCount: Int = runCatching {
+    providers.exec {
+        workingDir = rootProject.projectDir
+        commandLine("git", "rev-list", "--count", "HEAD", "--", ".")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get().trim().toInt()
+}.getOrDefault(0).coerceAtLeast(1)
 val apiBaseUrl: String = configuredApiBaseUrl ?: "http://192.168.43.10:8000"
 val fixtureDefault: String = (project.findProperty("fieldpassFixtureMode") as String?) ?: "false"
 
@@ -60,8 +70,8 @@ android {
         applicationId = "com.fieldpass.student"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = appCommitCount
+        versionName = "0.1.$appCommitCount"
         buildConfigField("String", "DEFAULT_API_BASE_URL", "\"$apiBaseUrl\"")
     }
 
@@ -144,7 +154,6 @@ dependencies {
     implementation(libs.camerax.camera2)
     implementation(libs.camerax.lifecycle)
     implementation(libs.camerax.view)
-    implementation(libs.mlkit.face.detection)
     implementation(libs.play.services.location)
     implementation(libs.coroutines.android)
     implementation(libs.coroutines.play.services)

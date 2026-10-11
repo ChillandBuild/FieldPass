@@ -1,14 +1,17 @@
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends
-from sqlalchemy import delete, select
+from fastapi import APIRouter, Depends, Response
+from sqlalchemy import delete, exists, select
 from sqlalchemy.orm import Session
 
 from app import clock, errors, rules
 from app.db import get_session
-from app.models import Activity, CheckpointWindow, RosterEntry, StudentDevice, User, VenueRegion, new_id
+from app.models import (
+    Activity, Attempt, AttendanceEvent, CheckpointWindow, Decision, Observation, RosterEntry, StudentDevice, User,
+    VenueRegion, new_id,
+)
 from app.schemas import ActivityIn, ActivityList, ActivityOut, CheckpointIn, CheckpointWindowOut, StudentList, StudentOut, UserList
 from app.config import Settings
 from app.security import current_user, get_settings_dep, require_faculty
@@ -69,23 +72,84 @@ def create_activity(
     session: Session = Depends(get_session),
     settings: Settings = Depends(get_settings_dep),
 ) -> ActivityOut:
-    student_ids = list(dict.fromkeys(body.student_ids))
-    found = set(session.scalars(select(User.id).where(User.id.in_(student_ids), User.role == "student")))
-    if found != set(student_ids):
-        raise errors.validation_error("student_ids contains an unknown student.")
+    student_ids = _checked_student_ids(session, body.student_ids)
     activity = Activity(
         id=new_id("act"), name=body.name, venue_name=body.venue_name, venue_lat=body.venue_lat,
         venue_lng=body.venue_lng, radius_m=body.radius_m, starts_at=body.starts_at, ends_at=body.ends_at,
         created_by_id=faculty.id, created_at=clock.now(),
     )
-    if body.venue_regions:
-        first = body.venue_regions[0]
-        activity.venue_lat, activity.venue_lng, activity.radius_m = first.venue_lat, first.venue_lng, first.radius_m
-        activity.venue_regions = [VenueRegion(position=i, **region.model_dump()) for i, region in enumerate(body.venue_regions)]
+    _apply_regions(activity, body)
     session.add(activity)
     session.add_all(RosterEntry(activity_id=activity.id, student_id=sid) for sid in student_ids)
     session.commit()
     return render_activity(session, activity, faculty, rules.timing_from(settings))
+
+
+def _checked_student_ids(session: Session, requested: list[str]) -> list[str]:
+    student_ids = list(dict.fromkeys(requested))
+    found = set(session.scalars(select(User.id).where(User.id.in_(student_ids), User.role == "student")))
+    if found != set(student_ids):
+        raise errors.validation_error("student_ids contains an unknown student.")
+    return student_ids
+
+
+def _apply_regions(activity: Activity, body: ActivityIn) -> None:
+    """Venue regions replace the single circle; the first region also fills the legacy venue fields."""
+    if body.venue_regions:
+        first = body.venue_regions[0]
+        activity.venue_lat, activity.venue_lng, activity.radius_m = first.venue_lat, first.venue_lng, first.radius_m
+    activity.venue_regions = [VenueRegion(position=i, **region.model_dump()) for i, region in enumerate(body.venue_regions)]
+
+
+def _campus_day_start(moment: datetime, settings: Settings) -> datetime:
+    """Start (as UTC) of the campus-local calendar day that contains `moment`."""
+    offset = timedelta(minutes=settings.campus_utc_offset_minutes)
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    local = moment.astimezone(timezone.utc) + offset
+    return local.replace(hour=0, minute=0, second=0, microsecond=0) - offset
+
+
+@router.put("/activities/{activity_id}", response_model=ActivityOut)
+def update_activity(
+    activity_id: str,
+    body: ActivityIn,
+    faculty: User = Depends(require_faculty),
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings_dep),
+) -> ActivityOut:
+    """Replace an activity's details and roster. Allowed up to the day before it starts (campus time)."""
+    activity = get_activity(session, activity_id)
+    now = clock.now()
+    if now >= _campus_day_start(activity.starts_at, settings):
+        raise errors.activity_locked()
+    if now >= _campus_day_start(body.starts_at, settings):
+        raise errors.validation_error("The new start must be on a day after today.")
+    student_ids = _checked_student_ids(session, body.student_ids)
+    activity.name, activity.venue_name = body.name, body.venue_name
+    activity.venue_lat, activity.venue_lng, activity.radius_m = body.venue_lat, body.venue_lng, body.radius_m
+    activity.starts_at, activity.ends_at = body.starts_at, body.ends_at
+    _apply_regions(activity, body)
+    session.execute(delete(RosterEntry).where(RosterEntry.activity_id == activity.id))
+    session.add_all(RosterEntry(activity_id=activity.id, student_id=sid) for sid in student_ids)
+    session.commit()
+    return render_activity(session, activity, faculty, rules.timing_from(settings))
+
+
+@router.delete("/activities/{activity_id}", status_code=204)
+def delete_activity(
+    activity_id: str, _: User = Depends(require_faculty), session: Session = Depends(get_session)
+) -> Response:
+    """Delete an activity that has no attendance records at all; otherwise 409 and nothing changes."""
+    activity = get_activity(session, activity_id)
+    for model in (Attempt, AttendanceEvent, Decision, Observation):
+        if session.scalar(select(exists().where(model.activity_id == activity.id))):
+            raise errors.activity_has_attendance()
+    for model in (CheckpointWindow, RosterEntry):
+        session.execute(delete(model).where(model.activity_id == activity.id))
+    session.delete(activity)  # its venue regions go with it (delete-orphan cascade)
+    session.commit()
+    return Response(status_code=204)
 
 
 @router.get("/activities", response_model=ActivityList)
@@ -98,7 +162,15 @@ def list_activities(
     if user.role == "student":
         query = query.join(RosterEntry, RosterEntry.activity_id == Activity.id).where(RosterEntry.student_id == user.id)
     timing = rules.timing_from(settings)
-    return ActivityList(items=[render_activity(session, a, user, timing) for a in session.scalars(query)])
+    activities = list(session.scalars(query))
+    if user.role == "student":
+        # An activity the student never checked in to disappears once its check-in window has closed.
+        now = clock.now()
+        checked_in = set(session.scalars(
+            select(AttendanceEvent.activity_id).where(AttendanceEvent.student_id == user.id, AttendanceEvent.action == "check_in")
+        ))
+        activities = [a for a in activities if a.id in checked_in or now <= rules.checkin_window(a, timing)[1]]
+    return ActivityList(items=[render_activity(session, a, user, timing) for a in activities])
 
 
 @router.get("/activities/{activity_id}", response_model=ActivityOut)

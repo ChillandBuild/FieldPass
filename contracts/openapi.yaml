@@ -821,6 +821,138 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorOut'
   /api/v1/activities/{activity_id}:
+    put:
+      tags:
+      - activities
+      summary: Update Activity
+      description: Replace an activity's details and roster. Allowed up to the day
+        before it starts (campus time).
+      operationId: update_activity_api_v1_activities__activity_id__put
+      parameters:
+      - name: activity_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Activity Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivityIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityOut'
+        '422':
+          description: validation_error, unusable_capture, multiple_faces, location_stale,
+            device_key_required, face_not_matched
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: not_authenticated or invalid_credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '403':
+          description: forbidden, not_assigned, device_mismatch, device_taken or bad_signature
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: not_found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '409':
+          description: enrollment_not_approved, outside_activity_window, invalid_action_order,
+            checkpoint_not_open, already_decided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '410':
+          description: attempt_expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '413':
+          description: image_too_large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+    delete:
+      tags:
+      - activities
+      summary: Delete Activity
+      description: Delete an activity that has no attendance records at all; otherwise
+        409 and nothing changes.
+      operationId: delete_activity_api_v1_activities__activity_id__delete
+      parameters:
+      - name: activity_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Activity Id
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: validation_error, unusable_capture, multiple_faces, location_stale,
+            device_key_required, face_not_matched
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: not_authenticated or invalid_credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '403':
+          description: forbidden, not_assigned, device_mismatch, device_taken or bad_signature
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: not_found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '409':
+          description: enrollment_not_approved, outside_activity_window, invalid_action_order,
+            checkpoint_not_open, already_decided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '410':
+          description: attempt_expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '413':
+          description: image_too_large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
     get:
       tags:
       - activities
@@ -1580,7 +1712,7 @@ components:
           title: Radius M
         venue_regions:
           items:
-            $ref: '#/components/schemas/VenueRegionIn'
+            $ref: '#/components/schemas/VenueRegionOut'
           type: array
           title: Venue Regions
         starts_at:
@@ -2350,6 +2482,25 @@ components:
       - venue_lng
       - radius_m
       title: VenueRegionIn
+    VenueRegionOut:
+      properties:
+        venue_lat:
+          type: number
+          title: Venue Lat
+        venue_lng:
+          type: number
+          title: Venue Lng
+        radius_m:
+          type: integer
+          title: Radius M
+      type: object
+      required:
+      - venue_lat
+      - venue_lng
+      - radius_m
+      title: VenueRegionOut
+      description: 'Output twin of VenueRegionIn: no radius cap, so a legacy or test
+        row above the input limit still renders.'
     ErrorOut:
       properties:
         error:

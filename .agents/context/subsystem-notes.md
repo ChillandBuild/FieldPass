@@ -46,4 +46,5 @@
 - Phone clock skew can cause `location_stale`.
 - Phone key lives in the Keystore (`fieldpass_device_key`); reinstall = new key = faculty reset. The signed text must match `backend/app/device_keys.py` byte for byte (shared test vector in all three test suites; numbers formatted with `Locale.US`).
 - Test helpers nudge latitude by 0.000001° per submit, otherwise every test check-in is flagged `location_repeated`.
-- `YAW_SIGN_FOR_LEFT = 1f` in `LivenessGuide.kt` is a guess; real-phone sign check owed (Task 16 Step 2).
+- App version comes from git (commit count touching `android/`), not a hand-edited line; see decisions log 2026-10-11. Commit before building an APK to hand out — uncommitted edits keep the old `versionCode` and a phone refuses an equal-or-lower one.
+- `./gradlew` needs JDK 17+ (Gradle 9.6). On the Windows dev box `JAVA_HOME` defaults to JDK 8 (`C:\java\jdk1.8.0_321`); point it at `C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot` for terminal builds. Android Studio uses its own JDK.

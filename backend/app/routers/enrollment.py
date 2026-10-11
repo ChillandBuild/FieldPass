@@ -108,6 +108,9 @@ def upload_enrollment_for_student(
     student = session.get(User, student_id)
     if student is None or student.role != "student":
         raise errors.not_found("That student does not exist.")
+    current = session.scalar(select(Enrollment).where(Enrollment.student_id == student.id))
+    if current is not None:
+        raise errors.already_enrolled()  # faculty upload the photo once; it is never replaced
     return _enroll(photo, student, session, engine, store)
 
 

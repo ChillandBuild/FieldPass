@@ -39,6 +39,10 @@ class FaceEngine(Protocol):
         """Return "match", "uncertain" or "no_match" for two embeddings."""
         ...
 
+    def similarity(self, enrolled: bytes, probe: bytes) -> float:
+        """Raw cosine similarity of two embeddings. Stored server-side for calibration, never sent to clients."""
+        ...
+
 
 def verdict_from_score(score: float, threshold: float, margin: float) -> str:
     """score >= threshold: match; within `margin` below it: uncertain; lower: no_match."""
