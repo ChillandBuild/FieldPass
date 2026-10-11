@@ -450,6 +450,7 @@ the seed commands again) or by adding the columns in place. Postgres (schema `fi
 ALTER TABLE fieldpass.attempts ADD COLUMN nonce VARCHAR NOT NULL DEFAULT '';
 ALTER TABLE fieldpass.attempts ADD COLUMN challenge VARCHAR NOT NULL DEFAULT 'left';
 ALTER TABLE fieldpass.attendance_events ADD COLUMN location_fingerprint VARCHAR NULL;
+ALTER TABLE fieldpass.attendance_events ADD COLUMN face_score DOUBLE PRECISION NULL;
 ```
 
 SQLite uses the same statements without the `fieldpass.` prefix. The `student_devices` table is new and is

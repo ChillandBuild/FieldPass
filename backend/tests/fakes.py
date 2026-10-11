@@ -34,6 +34,9 @@ class FakeFaceEngine:
             return FaceAnalysis(count=2)
         return FaceAnalysis(count=0)
 
+    def similarity(self, enrolled: bytes, probe: bytes) -> float:
+        return {MATCH: 0.9, UNCERTAIN: 0.3}.get(self.compare(enrolled, probe), 0.0)
+
     def compare(self, enrolled: bytes, probe: bytes) -> str:
         if enrolled == probe:
             return MATCH

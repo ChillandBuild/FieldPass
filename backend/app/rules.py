@@ -14,8 +14,9 @@ ACTIONS = ("check_in", "checkpoint", "check_out")
 
 @dataclass(frozen=True)
 class Timing:
-    """How early check-in opens and how long check-out stays open after the activity ends."""
+    """How early check-in opens, how long after the start it closes, and how long check-out stays open after the end."""
     checkin_lead: timedelta = timedelta(minutes=15)
+    checkin_cutoff: timedelta = timedelta(minutes=30)
     checkout_grace: timedelta = timedelta(minutes=30)
 
 
@@ -25,12 +26,13 @@ DEFAULT_TIMING = Timing()
 def timing_from(settings: Settings) -> Timing:
     return Timing(
         checkin_lead=timedelta(minutes=settings.checkin_lead_minutes),
+        checkin_cutoff=timedelta(minutes=settings.checkin_cutoff_minutes),
         checkout_grace=timedelta(minutes=settings.checkout_grace_minutes),
     )
 
 
 def checkin_window(activity: Activity, timing: Timing = DEFAULT_TIMING) -> tuple[datetime, datetime]:
-    return activity.starts_at - timing.checkin_lead, activity.ends_at
+    return activity.starts_at - timing.checkin_lead, min(activity.starts_at + timing.checkin_cutoff, activity.ends_at)
 
 
 def checkout_deadline(activity: Activity, timing: Timing = DEFAULT_TIMING) -> datetime:

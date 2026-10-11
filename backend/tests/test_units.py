@@ -86,8 +86,8 @@ def test_checkin_window_edges():
     ok = lambda now: rules.check_action_allowed("check_in", act, [], [], now)  # noqa: E731
     assert ok(T0 - timedelta(minutes=15)) is None
     assert code_of(rules.check_action_allowed, "check_in", act, [], [], T0 - timedelta(minutes=15, seconds=1)) == "outside_activity_window"
-    assert ok(act.ends_at) is None
-    assert code_of(rules.check_action_allowed, "check_in", act, [], [], act.ends_at + timedelta(seconds=1)) == "outside_activity_window"
+    assert ok(T0 + timedelta(minutes=30)) is None
+    assert code_of(rules.check_action_allowed, "check_in", act, [], [], T0 + timedelta(minutes=30, seconds=1)) == "outside_activity_window"
 
 
 def test_checkout_deadline_edges():

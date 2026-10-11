@@ -26,6 +26,7 @@ DEFAULT_LIVENESS_FRONT_MAX_OFFSET = 0.12
 DEFAULT_LIVENESS_TURN_MIN_OFFSET = 0.25
 
 DEFAULT_CHECKIN_LEAD_MINUTES = 15.0
+DEFAULT_CHECKIN_CUTOFF_MINUTES = 30.0
 DEFAULT_CHECKOUT_GRACE_MINUTES = 30.0
 MAX_WINDOW_MINUTES = 7 * 24 * 60  # an activity lasts at most 7 days; a longer lead or grace is a typo
 
@@ -60,6 +61,7 @@ class Settings:
     token_ttl_minutes: int
     enable_docs: bool = False
     checkin_lead_minutes: float = DEFAULT_CHECKIN_LEAD_MINUTES
+    checkin_cutoff_minutes: float = DEFAULT_CHECKIN_CUTOFF_MINUTES
     checkout_grace_minutes: float = DEFAULT_CHECKOUT_GRACE_MINUTES
     # Empty means SQLite at database_path. Otherwise a normalised postgresql+psycopg:// URL (it holds a password).
     database_url: str = field(default="", repr=False)
@@ -202,6 +204,7 @@ def load_settings(env_file: Path | None = None, environ: dict[str, str] | None =
         token_ttl_minutes=int(_number(env, "TOKEN_TTL_MINUTES", 480, int)),
         enable_docs=env.get("ENABLE_DOCS", "").strip().lower() in TRUE_WORDS,
         checkin_lead_minutes=_minutes(env, "CHECKIN_LEAD_MINUTES", DEFAULT_CHECKIN_LEAD_MINUTES),
+        checkin_cutoff_minutes=_minutes(env, "CHECKIN_CUTOFF_MINUTES", DEFAULT_CHECKIN_CUTOFF_MINUTES),
         checkout_grace_minutes=_minutes(env, "CHECKOUT_GRACE_MINUTES", DEFAULT_CHECKOUT_GRACE_MINUTES),
         database_url=_database_url(env),
         database_schema=_database_schema(env),

@@ -162,7 +162,15 @@ def list_activities(
     if user.role == "student":
         query = query.join(RosterEntry, RosterEntry.activity_id == Activity.id).where(RosterEntry.student_id == user.id)
     timing = rules.timing_from(settings)
-    return ActivityList(items=[render_activity(session, a, user, timing) for a in session.scalars(query)])
+    activities = list(session.scalars(query))
+    if user.role == "student":
+        # An activity the student never checked in to disappears once its check-in window has closed.
+        now = clock.now()
+        checked_in = set(session.scalars(
+            select(AttendanceEvent.activity_id).where(AttendanceEvent.student_id == user.id, AttendanceEvent.action == "check_in")
+        ))
+        activities = [a for a in activities if a.id in checked_in or now <= rules.checkin_window(a, timing)[1]]
+    return ActivityList(items=[render_activity(session, a, user, timing) for a in activities])
 
 
 @router.get("/activities/{activity_id}", response_model=ActivityOut)

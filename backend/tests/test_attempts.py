@@ -71,10 +71,10 @@ def test_checkin_window_opens_15_minutes_early(api, test_clock):
     assert api.attempt("student1", activity["id"], "check_in").status_code == 201
 
 
-def test_checkin_window_closes_at_end(api, test_clock):
+def test_checkin_window_closes_30_minutes_after_start(api, test_clock):
     api.enroll("student1", "asha")
-    activity = api.make_activity()           # ends 13:30
-    test_clock.set(test_clock.current.replace(hour=13, minute=30, second=0))
+    activity = api.make_activity()           # starts 09:30
+    test_clock.set(test_clock.current.replace(hour=10, minute=0, second=0))
     assert api.attempt("student1", activity["id"], "check_in").status_code == 201
     test_clock.advance(seconds=1)
     assert err(api.attempt("student1", activity["id"], "check_in")) == (409, "outside_activity_window")
