@@ -70,14 +70,7 @@ def _store_enrollment(session: Session, student: User, new_file: str, embedding_
     raise errors.invalid_order("Another upload for this student is in progress. Try again.")
 
 
-@router.post("/enrollment", response_model=EnrollmentOut, status_code=201)
-def upload_enrollment(
-    photo: UploadFile = File(...),
-    student: User = Depends(require_student),
-    session: Session = Depends(get_session),
-    engine: FaceEngine = Depends(get_face_engine),
-    store: PhotoStore = Depends(get_photo_store),
-) -> EnrollmentOut:
+def _enroll(photo: UploadFile, student: User, session: Session, engine: FaceEngine, store: PhotoStore) -> EnrollmentOut:
     # Every upload is a new enrollment with a new id, so a decision on the old id can never land on a new photo.
     analysis = require_one_face(engine, read_image(photo))
     new_file = store.save(analysis.normalized_jpeg or b"")
@@ -89,6 +82,33 @@ def upload_enrollment(
     for name in old_files:
         store.delete(name)
     return _view(session, student, row)
+
+
+@router.post("/enrollment", response_model=EnrollmentOut, status_code=201)
+def upload_enrollment(
+    photo: UploadFile = File(...),
+    student: User = Depends(require_student),
+    session: Session = Depends(get_session),
+    engine: FaceEngine = Depends(get_face_engine),
+    store: PhotoStore = Depends(get_photo_store),
+) -> EnrollmentOut:
+    return _enroll(photo, student, session, engine, store)
+
+
+@router.post("/students/{student_id}/enrollment", response_model=EnrollmentOut, status_code=201)
+def upload_enrollment_for_student(
+    student_id: str,
+    photo: UploadFile = File(...),
+    _: User = Depends(require_faculty),
+    session: Session = Depends(get_session),
+    engine: FaceEngine = Depends(get_face_engine),
+    store: PhotoStore = Depends(get_photo_store),
+) -> EnrollmentOut:
+    # Faculty upload is pending like a student's; approval is still a separate faculty step (identity_confirmed).
+    student = session.get(User, student_id)
+    if student is None or student.role != "student":
+        raise errors.not_found("That student does not exist.")
+    return _enroll(photo, student, session, engine, store)
 
 
 @router.get("/enrollment/me", response_model=EnrollmentOut)

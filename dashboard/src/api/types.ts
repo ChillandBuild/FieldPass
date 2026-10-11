@@ -185,6 +185,8 @@ export interface Api {
   enrollmentPhoto(id: string): Promise<Blob>
   approveEnrollment(id: string): Promise<Enrollment>
   rejectEnrollment(id: string, reason: string): Promise<Enrollment>
+  /** Faculty upload a student's enrollment photo. It is pending until a faculty member approves it. */
+  uploadEnrollment(studentId: string, photo: File): Promise<Enrollment>
   listStudents(): Promise<Student[]>
   resetDevice(studentId: string): Promise<Student>
   listActivities(): Promise<Activity[]>

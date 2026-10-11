@@ -30,6 +30,7 @@ const KNOWN_CODES: readonly string[] = [
 interface RequestOptions {
   method?: 'GET' | 'POST'
   body?: unknown
+  form?: FormData
   auth?: boolean
 }
 
@@ -44,7 +45,7 @@ function toApiError(status: number, payload: unknown): ApiError {
 
 async function send(path: string, opts: RequestOptions = {}): Promise<Response> {
   const headers: Record<string, string> = {}
-  if (opts.body !== undefined) headers['Content-Type'] = 'application/json'
+  if (opts.body !== undefined && !opts.form) headers['Content-Type'] = 'application/json'
   const token = opts.auth === false ? null : getToken()
   if (token) headers.Authorization = `Bearer ${token}`
   let res: Response
@@ -52,7 +53,7 @@ async function send(path: string, opts: RequestOptions = {}): Promise<Response> 
     res = await fetch(`${getBaseUrl()}/api/v1${path}`, {
       method: opts.method ?? 'GET',
       headers,
-      body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+      body: opts.form ?? (opts.body === undefined ? undefined : JSON.stringify(opts.body)),
     })
   } catch {
     throw new ApiError('network_error', 'Network error')
@@ -96,6 +97,11 @@ export const realApi: Api = {
     }),
   rejectEnrollment: (id, reason) =>
     json<Enrollment>(`/enrollments/${encodeURIComponent(id)}/reject`, { method: 'POST', body: { reason } }),
+  uploadEnrollment: (studentId, photo) => {
+    const form = new FormData()
+    form.append('photo', photo)
+    return json<Enrollment>(`/students/${encodeURIComponent(studentId)}/enrollment`, { method: 'POST', form })
+  },
   listStudents: async () => (await json<{ items: Student[] }>('/students')).items,
   resetDevice: (id) => json<Student>(`/students/${encodeURIComponent(id)}/device/reset`, { method: 'POST' }),
   listActivities: async () => (await json<{ items: Activity[] }>('/activities')).items,

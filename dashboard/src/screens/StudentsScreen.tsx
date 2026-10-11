@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { api, messageForError } from '../api'
 import type { Student } from '../api'
 import { Empty, Loading, Notice } from '../components/Notice'
@@ -14,10 +14,12 @@ interface RowProps {
   onAsk: () => void
   onCancel: () => void
   onConfirm: () => void
+  onUpload: (file: File) => void
 }
 
-function StudentRow({ student, isAsking, isBusy, onAsk, onCancel, onConfirm }: RowProps) {
+function StudentRow({ student, isAsking, isBusy, onAsk, onCancel, onConfirm, onUpload }: RowProps) {
   const bound = student.device_bound_at
+  const picker = useRef<HTMLInputElement>(null)
   return (
     <li className="card activity-row">
       <div>
@@ -25,6 +27,27 @@ function StudentRow({ student, isAsking, isBusy, onAsk, onCancel, onConfirm }: R
         <p className="muted">{student.username}</p>
         <p>{bound ? `Phone linked ${formatDateTime(bound)}` : `No phone linked yet. ${NEXT_SIGN_IN}`}</p>
       </div>
+      <input
+        ref={picker}
+        type="file"
+        accept="image/jpeg,image/png"
+        hidden
+        aria-label={`Enrollment photo file for ${student.full_name}`}
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          e.target.value = ''
+          if (file) onUpload(file)
+        }}
+      />
+      <button
+        type="button"
+        className="btn"
+        onClick={() => picker.current?.click()}
+        disabled={isBusy}
+        aria-label={`Upload enrollment photo for ${student.full_name}`}
+      >
+        Upload photo
+      </button>
       {bound && !isAsking ? (
         <button type="button" className="btn" onClick={onAsk} aria-label={`Reset phone for ${student.full_name}`}>
           Reset phone
@@ -65,6 +88,20 @@ export function StudentsScreen() {
     }
   }
 
+  async function uploadPhoto(student: Student, file: File): Promise<void> {
+    setBusy(true)
+    setFailure(null)
+    try {
+      await api.uploadEnrollment(student.id, file)
+      setDone(`Uploaded a photo for ${student.full_name}. Approve it on the Enrollments page before they can check in.`)
+    } catch (err) {
+      setDone(null)
+      setFailure(messageForError(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const students = data ?? []
   return (
     <>
@@ -88,6 +125,7 @@ export function StudentsScreen() {
             onAsk={() => { setAskingId(s.id); setDone(null); setFailure(null) }}
             onCancel={() => setAskingId(null)}
             onConfirm={() => { void confirmReset(s) }}
+            onUpload={(file) => { void uploadPhoto(s, file) }}
           />
         ))}
       </ul>

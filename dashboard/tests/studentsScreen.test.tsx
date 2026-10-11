@@ -54,4 +54,21 @@ describe('Students page', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('That item no longer exists.')
     expect(screen.queryByText('raw server text')).toBeNull()
   })
+
+  it('uploading a photo creates a pending enrollment and says it still needs approval', async () => {
+    render(<StudentsScreen />)
+    const file = new File(['jpeg-bytes'], 'asha.jpg', { type: 'image/jpeg' })
+    await userEvent.upload(within(await row('Kabir Menon')).getByLabelText('Enrollment photo file for Kabir Menon'), file)
+    expect(await screen.findByText(/Uploaded a photo for Kabir Menon\. Approve it on the Enrollments page/)).toBeInTheDocument()
+    const pending = await fixtureApi.listEnrollments('pending')
+    expect(pending.find((e) => e.student.username === 'student4')?.status).toBe('pending')
+  })
+
+  it('a failed upload shows the friendly error', async () => {
+    vi.spyOn(fixtureApi, 'uploadEnrollment').mockRejectedValue(new ApiError('multiple_faces', 'raw server text', 422))
+    render(<StudentsScreen />)
+    const file = new File(['x'], 'two.jpg', { type: 'image/jpeg' })
+    await userEvent.upload(within(await row('Asha Verma')).getByLabelText('Enrollment photo file for Asha Verma'), file)
+    expect(await screen.findByRole('alert')).toHaveTextContent('More than one face was found in the image.')
+  })
 })

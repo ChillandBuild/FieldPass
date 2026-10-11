@@ -127,3 +127,62 @@ def test_reupload_after_rejection_goes_pending(api):
     enrollment = upload(api, "student1", face("asha")).json()
     api.post("faculty1", f"/enrollments/{enrollment['id']}/reject", json={"reason": "blurry"})
     assert upload(api, "student1", face("asha")).json()["status"] == "pending"
+
+
+def faculty_upload(api, student_id, data, username="faculty1"):
+    return api.post(username, f"/students/{student_id}/enrollment", files={"photo": ("p.jpg", data, "image/jpeg")})
+
+
+def student_id_of(api, username):
+    return api.get("student1", "/enrollment/me").json()["student"]["id"] if username == "student1" else next(
+        s["id"] for s in api.get("faculty1", "/students").json()["items"] if s["username"] == username
+    )
+
+
+def test_faculty_uploads_pending_enrollment_for_a_student(api, settings):
+    sid = student_id_of(api, "student1")
+    resp = faculty_upload(api, sid, face("asha"))
+    body = resp.json()
+    assert resp.status_code == 201
+    assert body["status"] == "pending" and body["student"]["username"] == "student1"
+    assert api.get("student1", "/enrollment/me").json()["status"] == "pending"
+    assert api.get("faculty1", f"/enrollments/{body['id']}/photo").content == face("asha")
+    assert all(b"asha" not in p.read_bytes() for p in Path(settings.photo_dir).iterdir())
+
+
+def test_faculty_upload_still_needs_a_separate_approval(api):
+    sid = student_id_of(api, "student1")
+    enr = faculty_upload(api, sid, face("asha")).json()
+    resp = api.post("faculty1", f"/enrollments/{enr['id']}/approve", json={"identity_confirmed": True})
+    assert resp.json()["status"] == "approved" and resp.json()["decided_by"] == "Dr. Meera Rao"
+
+
+def test_faculty_upload_replaces_an_earlier_photo(api):
+    sid = student_id_of(api, "student1")
+    upload(api, "student1", face("asha"))
+    second = faculty_upload(api, sid, face("asha2")).json()
+    items = api.get("faculty1", "/enrollments").json()["items"]
+    assert [e["id"] for e in items] == [second["id"]]
+
+
+def test_student_cannot_use_the_faculty_upload(api):
+    sid = student_id_of(api, "student2")
+    resp = faculty_upload(api, sid, face("rohan"), username="student1")
+    assert resp.status_code == 403
+
+
+def test_faculty_upload_unknown_student_is_404(api):
+    resp = faculty_upload(api, "usr_nope", face("asha"))
+    assert resp.status_code == 404 and resp.json()["error"]["code"] == "not_found"
+
+
+def test_faculty_upload_for_a_faculty_id_is_404(api):
+    faculty_id = api.get("faculty1", "/auth/me").json()["id"]
+    assert faculty_upload(api, faculty_id, face("asha")).status_code == 404
+
+
+def test_faculty_upload_without_a_usable_face_is_rejected(api):
+    sid = student_id_of(api, "student1")
+    resp = faculty_upload(api, sid, BLANK)
+    assert resp.status_code == 422 and resp.json()["error"]["code"] == "unusable_capture"
+    assert faculty_upload(api, sid, TWO_FACES).json()["error"]["code"] == "multiple_faces"

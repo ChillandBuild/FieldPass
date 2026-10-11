@@ -253,6 +253,14 @@ Created by the backend seed command. Password comes from `SEED_PASSWORD` in `bac
 Everything above is unchanged. This section lists behaviour of the backend that the frozen text does not
 mention. Where it differs from the text above, this addendum describes what the backend does now.
 
+### Faculty enrollment upload
+
+| Method | Path | Auth | Request | Success |
+|---|---|---|---|---|
+| POST | `/students/{student_id}/enrollment` | faculty | multipart: `photo` | `201 Enrollment` (status `pending`) for that student. Replaces any earlier photo and cancels any earlier approval, exactly like the student upload. Errors: `unusable_capture`, `multiple_faces`, `image_too_large`, `not_found` (no such student, or the id is not a student), `forbidden` (student token) |
+
+The upload does not approve. A faculty member still approves it with `POST /enrollments/{id}/approve` and `identity_confirmed: true`.
+
 ### Extra error codes
 
 | HTTP | code | When |

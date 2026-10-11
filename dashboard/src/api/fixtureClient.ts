@@ -125,6 +125,19 @@ export const fixtureApi: Api = {
     if (reason.trim().length === 0) throw new ApiError('validation_error', 'Reason required', 422)
     return replaceEnrollment({ ...e, status: 'rejected', decided_at: iso(Date.now()), decided_by: FACULTY.full_name, decision_reason: reason })
   },
+  uploadEnrollment: async (studentId, photo) => {
+    await wait(); requireFaculty()
+    const student = STUDENTS.find((s) => s.id === studentId)
+    if (!student) throw new ApiError('not_found', 'No such student', 404)
+    if (photo.size === 0) throw new ApiError('unusable_capture', 'The image could not be used.', 422)
+    store = { ...store, counter: store.counter + 1 }
+    const fresh: Enrollment = {
+      id: `enr_fixture_${store.counter}`, status: 'pending', student: copy(student),
+      submitted_at: iso(Date.now()), decided_at: null, decided_by: null, decision_reason: null,
+    }
+    store = { ...store, enrollments: [...store.enrollments.filter((e) => e.student.id !== studentId), fresh] }
+    return copy(fresh)
+  },
   listStudents: async () => { await wait(); requireFaculty(); return copy(STUDENTS.map(withDevice)) },
   resetDevice: async (id) => {
     await wait()
