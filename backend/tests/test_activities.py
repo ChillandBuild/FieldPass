@@ -41,6 +41,21 @@ def test_create_activity_rejects_bad_input(api, patch):
     assert err(api.post("faculty1", "/activities", json=body)) == (422, "validation_error")
 
 
+def test_activity_with_radius_above_input_cap_still_renders(api, app):
+    """Rows written outside the API (test or legacy data) can exceed the 5000 m input cap; reads must not crash."""
+    from app.models import Activity
+
+    activity = api.make_activity(students=("student1",))
+    with app.state.session_factory() as session:
+        session.get(Activity, activity["id"]).radius_m = 20_000_000
+        session.commit()
+    listed = api.get("faculty1", "/activities")
+    assert listed.status_code == 200
+    assert listed.json()["items"][0]["venue_regions"][0]["radius_m"] == 20_000_000
+    assert api.get("faculty1", f"/activities/{activity['id']}").status_code == 200
+    assert api.get("student1", "/activities").status_code == 200
+
+
 def test_students_list_and_roster(api):
     activity = api.make_activity(students=("student1", "student3"))
     students = api.get("faculty1", "/students").json()["items"]

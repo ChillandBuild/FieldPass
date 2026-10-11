@@ -135,6 +135,14 @@ class VenueRegionIn(BaseModel):
     radius_m: int = Field(ge=0, le=5000)
 
 
+class VenueRegionOut(BaseModel):
+    """Output twin of VenueRegionIn: no radius cap, so a legacy or test row above the input limit still renders."""
+
+    venue_lat: float
+    venue_lng: float
+    radius_m: int
+
+
 class ActivityOut(BaseModel):
     id: str
     name: str
@@ -142,7 +150,7 @@ class ActivityOut(BaseModel):
     venue_lat: float
     venue_lng: float
     radius_m: int
-    venue_regions: list[VenueRegionIn] = Field(default_factory=list)
+    venue_regions: list[VenueRegionOut] = Field(default_factory=list)
     starts_at: str
     ends_at: str
     created_by: str
