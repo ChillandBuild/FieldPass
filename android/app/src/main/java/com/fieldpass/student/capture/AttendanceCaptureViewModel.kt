@@ -22,7 +22,11 @@ import kotlinx.coroutines.launch
 
 /**
  * State machine for one attendance attempt:
- * create attempt -> fresh location -> selfie -> submit against the attempt ID -> show the SERVER's result.
+ * create attempt -> fresh location -> optional faculty-screen code -> selfie -> submit against the attempt ID
+ * -> show the SERVER's result.
+ *
+ * The code step is an extra signal only: skipping it, or any failure in it, never blocks the selfie and submit.
+ * It has no timer of its own; the attempt's single countdown keeps running underneath it.
  *
  * The same attempt ID is reused for every retry (lost response, retake, stale location).
  * A new attempt is created only by [startOver] after the user acknowledges expiry.
@@ -35,6 +39,7 @@ class AttendanceCaptureViewModel(
     private val integrity: DeviceIntegritySource,
     private val elapsedRealtime: () -> Long,
     private val tickerEnabled: Boolean = true,
+    private val hasBackCamera: Boolean = true,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(CaptureUiState())
@@ -46,6 +51,8 @@ class AttendanceCaptureViewModel(
     private var locationJob: Job? = null
     private var submitJob: Job? = null
     private var tickerJob: Job? = null
+    private var presenceJob: Job? = null
+    private var codes = PresenceCodeDebounce()
 
     val actionType: Action get() = action
 
@@ -76,6 +83,7 @@ class AttendanceCaptureViewModel(
         clearSelfie()
         countdown = null
         started = false
+        codes = PresenceCodeDebounce()
         _state.value = CaptureUiState()
         start()
     }
@@ -91,6 +99,34 @@ class AttendanceCaptureViewModel(
     fun acceptPoorAccuracy() {
         if (_state.value.phase != CapturePhase.POOR_ACCURACY) return
         _state.update { it.copy(poorAccuracyAccepted = true, phase = afterLocationPhase(it), error = null) }
+    }
+
+    /**
+     * One decoded QR string from the scanner, which fires many times per second. Anything that is not a
+     * FieldPass code, anything already sent, and anything arriving while a check is running is dropped here.
+     */
+    fun onCodeScanned(raw: String) {
+        val attempt = _state.value.attempt ?: return
+        if (_state.value.phase != CapturePhase.AWAITING_CODE || presenceJob?.isActive == true) return
+        val code = codes.next(raw) ?: return
+        _state.update { it.copy(codeStatus = CodeStatus.CHECKING, error = null) }
+        presenceJob = viewModelScope.launch {
+            try {
+                onPresenceChecked(repository.submitPresenceCode(attempt.id, code))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                codes.sendFailed(code)
+                onPresenceError(ErrorParser.fromThrowable(e))
+            }
+        }
+    }
+
+    /** "Skip", and also what the screen calls when the back camera cannot start: straight on to the selfie. */
+    fun skipCode() {
+        if (_state.value.phase != CapturePhase.AWAITING_CODE) return
+        presenceJob?.cancel()
+        _state.update { it.copy(phase = CapturePhase.AWAITING_SELFIE, codeStepDone = true, codeStatus = CodeStatus.SCANNING, error = null) }
     }
 
     /** Photo A (looking straight) and photo B (head turned the way the server asked), taken together. */
@@ -183,8 +219,32 @@ class AttendanceCaptureViewModel(
         }
     }
 
-    private fun afterLocationPhase(s: CaptureUiState) =
-        if (s.selfie != null) CapturePhase.READY_TO_SUBMIT else CapturePhase.AWAITING_SELFIE
+    private fun afterLocationPhase(s: CaptureUiState) = when {
+        s.selfie != null -> CapturePhase.READY_TO_SUBMIT
+        hasBackCamera && !s.codeStepDone -> CapturePhase.AWAITING_CODE
+        else -> CapturePhase.AWAITING_SELFIE
+    }
+
+    private fun onPresenceChecked(verified: Boolean) {
+        if (_state.value.phase != CapturePhase.AWAITING_CODE) return
+        _state.update {
+            if (verified) {
+                it.copy(phase = CapturePhase.AWAITING_SELFIE, codeVerified = true, codeStepDone = true, codeStatus = CodeStatus.SCANNING, error = null)
+            } else {
+                it.copy(codeStatus = CodeStatus.TOO_OLD)
+            }
+        }
+    }
+
+    /** Only an expired attempt ends the step; anything else just shows a message while Skip and re-scanning stay open. */
+    private fun onPresenceError(e: AppError) {
+        if (_state.value.phase != CapturePhase.AWAITING_CODE) return
+        if (e.code == ErrorCode.ATTEMPT_EXPIRED) {
+            expire()
+        } else {
+            _state.update { it.copy(codeStatus = CodeStatus.FAILED, error = e.code) }
+        }
+    }
 
     private fun onSubmitError(e: AppError) {
         when {
@@ -207,6 +267,7 @@ class AttendanceCaptureViewModel(
     }
 
     private fun expire() {
+        presenceJob?.cancel()
         stopTicker()
         clearSelfie()
         _state.update {
@@ -215,6 +276,7 @@ class AttendanceCaptureViewModel(
     }
 
     private fun fail(code: ErrorCode) {
+        presenceJob?.cancel()
         stopTicker()
         clearSelfie()
         _state.update { it.copy(phase = CapturePhase.ATTEMPT_FAILED, selfie = null, turnPhoto = null, error = code) }
@@ -240,6 +302,7 @@ class AttendanceCaptureViewModel(
         locationJob?.cancel()
         submitJob?.cancel()
         tickerJob?.cancel()
+        presenceJob?.cancel()
     }
 
     /** Best-effort wipe of the in-memory JPEG; the reference is also dropped from state. */

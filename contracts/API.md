@@ -448,3 +448,62 @@ ALTER TABLE fieldpass.attendance_events ADD COLUMN location_fingerprint VARCHAR 
 
 SQLite uses the same statements without the `fieldpass.` prefix. The `student_devices` table is new and is
 created automatically. Old attempts get an empty nonce; the server does not reject that, but attempts expire after about 90 seconds, so none is still open when the new version starts.
+
+### Rotating presence code (QR)
+
+Faculty show a QR on the dashboard that changes every 10 seconds. A student scans it during check-in. A fresh scan is
+one more sign that the student is there. It only ever helps: a missing, wrong or old code never blocks a submit and
+never adds a review reason. There are no new review reasons.
+
+**Code format.** `fp1.{step}.{mac}`.
+
+- `step` is the whole number of steps since the Unix epoch: `floor(unix_seconds / step_seconds)`, written in decimal.
+  `step_seconds` is the setting `PRESENCE_CODE_STEP_SECONDS` (default 10, allowed 5 to 60).
+- `mac` is the first 16 bytes of `HMAC-SHA256(key, "{activity_id}|{step}")`, written as Base64url without padding.
+  `key` is `HMAC-SHA256(JWT_SECRET, "fieldpass-presence-code-v1")`.
+- A code is valid for its activity when it is well formed, its `step` is the current step or the one before it, and
+  the `mac` matches. So a code lives for between 1 and 2 steps. Anything else is just "not valid", never an error.
+- Nothing is stored for codes. The server recomputes them. Clients treat the code as an opaque string.
+
+**`GET /activities/{activity_id}/presence-code`** (faculty). Returns the code for the current step.
+
+```json
+{"code": "fp1.179162484.iqIRUSnPY8uMaz6r8PDlIw", "expires_at": "2026-10-10T09:34:10Z",
+ "server_time": "2026-10-10T09:34:00Z", "step_seconds": 10}
+```
+
+`expires_at` is when this step ends (the next code starts). Use `server_time` to correct for a wrong dashboard clock.
+Errors: `404 not_found` (no such activity), `409 outside_activity_window` (only open from the check-in opening time
+to the check-out deadline: `starts_at` minus the check-in lead until `ends_at` plus the check-out grace), `403 forbidden`
+(student token).
+
+**`POST /attempts/{attempt_id}/presence`** (student, the attempt must be the caller's). Body: `{"code": "<scanned text>"}`,
+1 to 200 characters. Returns `200 {"verified": true|false}`.
+
+- A valid code stores one row in `presence_scans` for the attempt and answers `true`.
+- A wrong, old or garbled code answers `false`. It is not an error and nothing is stored.
+- Sending it again is safe. Once the attempt has a scan, every later call answers `true`, whatever code is sent.
+- If the attempt already has an attendance event, nothing changes and the answer is the current state.
+- `404 not_found` for an unknown attempt, `403 forbidden` for someone else's attempt (same as submit),
+  `410 attempt_expired` when the attempt has expired and has no event.
+
+**Submit rule change.** In `POST /attempts/{id}/submit`, when the attempt has a scan, the location verdict is
+`uncertain` and the submitted `accuracy_m` is at most `PRESENCE_CODE_MAX_ACCURACY_M` (default 150, allowed 0 to 5000),
+the `location_uncertain` review reason is not added. The stored `location.verdict` stays `uncertain`.
+`location_outside` is never cleared by a scan. All other reasons work as before.
+
+The accuracy cap exists because the phone reports its own accuracy. Without it, a phone 5 km away could report an
+accuracy of 6000 m, get `uncertain` in place of `outside`, and clear the flag with a relayed code. Worked example, radius
+100 m, scan done: at the centre with accuracy 150 m the event is `recorded`; with accuracy 151 m it is `needs_review`
+with `location_uncertain`.
+
+**`presence_verified`.** Every `AttendanceEvent` gains `presence_verified: bool`: `true` when the event's attempt has a
+scan stored no later than the event's `received_at`. It says the code was scanned, not that a flag was cleared: it can be
+`true` next to `location_uncertain` (accuracy above the cap) or `location_outside`. It appears everywhere an event is returned (submit, attendance records, the register, history).
+
+**Database.** The new table `presence_scans` has `attempt_id` (primary key, references `attempts.id`) and `verified_at`.
+It is created automatically at startup, like `student_devices`. No existing table gets a new column, so no `ALTER TABLE`
+is needed. On Postgres it gets row level security with the other tables.
+
+**Limitation.** A QR shown for 10 to 20 seconds can be photographed and relayed to someone else within that time. The
+scan is a nudge, not proof, which is why it clears only `location_uncertain` and never `location_outside`.

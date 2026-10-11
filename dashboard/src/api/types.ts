@@ -88,6 +88,16 @@ export interface AttendanceEvent {
   review_reasons: ReviewReason[]
   location: LocationEvidence
   face: FaceEvidence
+  /** True when the student scanned a fresh rotating presence code. Absent on older backends: read it as false. */
+  presence_verified?: boolean
+}
+
+/** The rotating code faculty show as a QR. Opaque to the dashboard: render it exactly as received. */
+export interface PresenceCode {
+  code: string
+  expires_at: string
+  server_time: string
+  step_seconds: number
 }
 
 export interface Decision {
@@ -194,6 +204,8 @@ export interface Api {
   createActivity(input: CreateActivityInput): Promise<Activity>
   openCheckpoint(activityId: string, durationMinutes: number): Promise<CheckpointWindow>
   getRegister(activityId: string): Promise<Register>
+  /** The current rotating presence code for a running activity (faculty only). */
+  getPresenceCode(activityId: string): Promise<PresenceCode>
   decide(activityId: string, studentId: string, input: DecisionInput): Promise<AttendanceRecord>
   addObservation(activityId: string, input: ObservationInput): Promise<Observation>
   exportCsv(activityId: string): Promise<DownloadedFile>

@@ -14,12 +14,15 @@ import com.fieldpass.student.core.model.Items
 import com.fieldpass.student.core.model.LocationVerdict
 import com.fieldpass.student.core.model.LoginRequest
 import com.fieldpass.student.core.model.LoginResponse
+import com.fieldpass.student.core.model.PresenceRequest
+import com.fieldpass.student.core.model.PresenceResponse
 import com.fieldpass.student.core.model.ReviewReason
 import com.fieldpass.student.core.model.Role
 import com.fieldpass.student.core.model.AttemptRequest
 import com.fieldpass.student.data.api.ApiClient
 import kotlinx.serialization.encodeToString
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -87,6 +90,24 @@ class DtoSerializationTest {
         assertEquals(LocationVerdict.INSIDE, e.location?.verdict)
         assertEquals(15.0, e.location?.accuracyM ?: 0.0, 0.0)
         assertEquals(FaceVerdict.MATCH, e.face?.verdict)
+    }
+
+    @Test fun presenceVerifiedDefaultsToFalseWhenAnOlderBackendOmitsIt() {
+        val e = json.decodeFromString<AttendanceEvent>(eventJson)
+        assertFalse(e.presenceVerified)
+    }
+
+    @Test fun presenceVerifiedIsReadWhenPresent() {
+        val yes = json.decodeFromString<AttendanceEvent>(eventJson.replace(""""face": {""", """"presence_verified": true, "face": {"""))
+        assertTrue(yes.presenceVerified)
+        val no = json.decodeFromString<AttendanceEvent>(eventJson.replace(""""face": {""", """"presence_verified": false, "face": {"""))
+        assertFalse(no.presenceVerified)
+    }
+
+    @Test fun presenceRequestAndResponse() {
+        assertEquals("""{"code":"fp1.176000000.AbCd"}""", json.encodeToString(PresenceRequest("fp1.176000000.AbCd")))
+        assertTrue(json.decodeFromString<PresenceResponse>("""{"verified": true}""").verified)
+        assertFalse(json.decodeFromString<PresenceResponse>("""{"verified": false}""").verified)
     }
 
     @Test fun eventWithReviewReasons() {

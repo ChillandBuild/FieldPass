@@ -95,5 +95,10 @@ yet tested.
     (0.25) and `LIVENESS_MIRRORED` are calibrated with team photos before the demo (`scripts/nose_offset.py`).
 25. **Reinstalling the app or clearing its data needs a faculty reset.** The phone key lives in the Android
     Keystore and is lost with the app's data; the dashboard Students page has **Reset phone**.
+26. **The QR presence code can be relayed.** The code on the faculty screen changes every 10 seconds and is accepted
+    for up to 20. A photo of the screen sent to a friend within that time counts as a scan. So a scan only clears
+    `location_uncertain`, and only when the phone's reported accuracy is 150 m or better (`PRESENCE_CODE_MAX_ACCURACY_M`);
+    `location_outside` is never cleared, and a missing scan never blocks anyone. A relayed code plus a faked location
+    close to the venue still passes: the scan does not replace the location check.
 
 Where this list and `contracts/API.md` or the per-part READMEs disagree, fix the document that is wrong and tell the team.

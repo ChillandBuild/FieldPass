@@ -76,6 +76,8 @@ data class AttendanceEvent(
     @SerialName("review_reasons") val reviewReasons: List<ReviewReason> = emptyList(),
     val location: LocationEvidence? = null,
     val face: FaceEvidence? = null,
+    /** True when the student scanned a fresh faculty-screen code during this attempt. Absent on an older backend. */
+    @SerialName("presence_verified") val presenceVerified: Boolean = false,
 )
 
 @Serializable
@@ -151,6 +153,13 @@ data class Attempt(
     val nonce: String = "",
     val challenge: HeadTurn = HeadTurn.LEFT,
 )
+
+@Serializable
+data class PresenceRequest(val code: String)
+
+/** [verified] false means the code was wrong or too old: scan again. */
+@Serializable
+data class PresenceResponse(val verified: Boolean)
 
 @Serializable
 data class ApiErrorEnvelope(val error: ApiErrorBody)

@@ -180,6 +180,13 @@ class BackendContractTest {
         say("s08 attempt created ${attempt.id}: ttl ${total / 1000}s from created_at/expires_at")
     }
 
+    @Test fun s08b_presenceCodeThatIsNotRealIsNotVerified() = runBlocking {
+        // Needs the presence endpoint (rotating faculty code). A made-up fp1. code must come back verified=false, not an error.
+        assertFalse(student1.repo.submitPresenceCode(attempt.id, "fp1.0.not-a-real-code"))
+        expectError(ErrorCode.NOT_FOUND) { student1.repo.submitPresenceCode("att_does_not_exist", "fp1.0.not-a-real-code") }
+        say("s08b made-up code -> verified=false; unknown attempt -> not_found")
+    }
+
     @Test fun s09_blankSelfieIsUnusableAndAttemptStaysOpen() = runBlocking {
         val e = expectError(ErrorCode.UNUSABLE_CAPTURE) { student1.repo.submitAttempt(attempt, evidence(blank, fix())) }
         assertEquals(422, e.httpStatus)
@@ -209,6 +216,7 @@ class BackendContractTest {
         assertEquals(FaceVerdict.MATCH, event.face?.verdict)
         assertTrue(event.reviewReasons.isEmpty())
         assertEquals(AttendanceStatus.RECORDED, event.status)
+        assertFalse("no real code was scanned in this flow", event.presenceVerified)
         say("s11 submit ok on SAME attempt after unusable+stale: ${event.id} status=${event.status} location=${event.location?.verdict} face=${event.face?.verdict}")
     }
 

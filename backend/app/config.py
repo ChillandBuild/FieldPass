@@ -27,6 +27,11 @@ DEFAULT_LIVENESS_TURN_MIN_OFFSET = 0.25
 
 DEFAULT_CHECKIN_LEAD_MINUTES = 15.0
 DEFAULT_CHECKOUT_GRACE_MINUTES = 30.0
+DEFAULT_PRESENCE_CODE_STEP_SECONDS = 10
+MIN_PRESENCE_CODE_STEP_SECONDS = 5
+MAX_PRESENCE_CODE_STEP_SECONDS = 60
+DEFAULT_PRESENCE_CODE_MAX_ACCURACY_M = 150.0
+MAX_PRESENCE_CODE_MAX_ACCURACY_M = 5000.0
 MAX_WINDOW_MINUTES = 7 * 24 * 60  # an activity lasts at most 7 days; a longer lead or grace is a typo
 
 REQUIRED_SECRETS = ("JWT_SECRET", "PHOTO_ENCRYPTION_KEY", "SEED_PASSWORD", "FACULTY_SEED_PASSWORD")
@@ -71,6 +76,11 @@ class Settings:
     liveness_front_max_offset: float = DEFAULT_LIVENESS_FRONT_MAX_OFFSET
     liveness_turn_min_offset: float = DEFAULT_LIVENESS_TURN_MIN_OFFSET
     liveness_mirrored: bool = False
+    # How long one rotating presence (QR) code lasts. A code stays valid for its own step and the next one.
+    presence_code_step_seconds: int = DEFAULT_PRESENCE_CODE_STEP_SECONDS
+    # A scan settles an "uncertain" location only when the phone's own accuracy figure is at most this. The figure
+    # is reported by the phone, so without a cap a far-away phone could claim a huge one to dodge "outside".
+    presence_code_max_accuracy_m: float = DEFAULT_PRESENCE_CODE_MAX_ACCURACY_M
 
 
 def _read_env_file(path: Path) -> dict[str, str]:
@@ -101,11 +111,31 @@ def _number(env: dict[str, str], key: str, default: float, cast: type) -> float:
         raise ConfigError(f"{key} must be a number, got {raw!r}") from exc
 
 
+def _presence_max_accuracy(env: dict[str, str]) -> float:
+    """Metres, 0 to MAX_PRESENCE_CODE_MAX_ACCURACY_M. 0 means a scan never settles an uncertain location."""
+    key = "PRESENCE_CODE_MAX_ACCURACY_M"
+    value = float(_number(env, key, DEFAULT_PRESENCE_CODE_MAX_ACCURACY_M, float))
+    if not math.isfinite(value) or not 0 <= value <= MAX_PRESENCE_CODE_MAX_ACCURACY_M:
+        raise ConfigError(f"{key} must be between 0 and {MAX_PRESENCE_CODE_MAX_ACCURACY_M:g} metres, got {env.get(key)!r}")
+    return value
+
+
 def _minutes(env: dict[str, str], key: str, default: float) -> float:
     """A non-negative, finite number of minutes (fractions allowed), at most MAX_WINDOW_MINUTES."""
     value = float(_number(env, key, default, float))
     if not math.isfinite(value) or value < 0 or value > MAX_WINDOW_MINUTES:
         raise ConfigError(f"{key} must be between 0 and {MAX_WINDOW_MINUTES} minutes, got {env.get(key)!r}")
+    return value
+
+
+def _presence_step(env: dict[str, str]) -> int:
+    """Whole seconds, MIN_PRESENCE_CODE_STEP_SECONDS to MAX_PRESENCE_CODE_STEP_SECONDS."""
+    value = int(_number(env, "PRESENCE_CODE_STEP_SECONDS", DEFAULT_PRESENCE_CODE_STEP_SECONDS, int))
+    if not MIN_PRESENCE_CODE_STEP_SECONDS <= value <= MAX_PRESENCE_CODE_STEP_SECONDS:
+        raise ConfigError(
+            f"PRESENCE_CODE_STEP_SECONDS must be between {MIN_PRESENCE_CODE_STEP_SECONDS} and "
+            f"{MAX_PRESENCE_CODE_STEP_SECONDS}, got {env.get('PRESENCE_CODE_STEP_SECONDS')!r}"
+        )
     return value
 
 
@@ -207,6 +237,8 @@ def load_settings(env_file: Path | None = None, environ: dict[str, str] | None =
         liveness_front_max_offset=front_max,
         liveness_turn_min_offset=turn_min,
         liveness_mirrored=env.get("LIVENESS_MIRRORED", "").strip().lower() in TRUE_WORDS,
+        presence_code_step_seconds=_presence_step(env),
+        presence_code_max_accuracy_m=_presence_max_accuracy(env),
     )
 
 

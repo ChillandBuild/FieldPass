@@ -89,6 +89,7 @@ npm run typecheck    # tsc --noEmit
 npm run lint         # eslint
 npm test             # vitest (unit and component tests)
 npm run e2e          # end-to-end run against the REAL backend (see below)
+npm run e2e:fixture  # Chromium specs in fixture mode, no backend needed (presence code overlay)
 npm run screenshots  # Playwright screenshots into screenshots/ (needs the app running in fixture mode)
 ```
 
@@ -101,6 +102,9 @@ The script fails if any page overflows horizontally at 320, 768, 1024 or 1440 px
 - One row per rostered student: Arrival, Last recorded checkpoint, Departure (local time with timezone), a status
   badge in words, review reasons in plain words, a "Missing checkout: incomplete" marker, the faculty decision with
   reason, who and when, and an "Outdated decision, new evidence arrived" marker when the decision is no longer current.
+- A "Show presence code" button next to the checkpoint control opens a full-screen QR for a projector. The code changes every
+  10 seconds (the wait comes from the server's own clock), the overlay shows a countdown, and requests stop when it is closed or
+  the tab is hidden. Events whose code was scanned show a green "Code scanned" mark. The QR is always black on white.
 - In-person faculty observations are listed separately, in a purple box titled "In-person observations by faculty".
 - A "Students" page lists every student and whether a phone is linked, with a two-step "Reset phone"
   button for a lost, replaced or reinstalled phone.

@@ -6,10 +6,10 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from app import clock, errors, rules
+from app import clock, errors, presence, rules
 from app.db import get_session
 from app.models import Activity, CheckpointWindow, RosterEntry, StudentDevice, User, VenueRegion, new_id
-from app.schemas import ActivityIn, ActivityList, ActivityOut, CheckpointIn, CheckpointWindowOut, StudentList, StudentOut, UserList
+from app.schemas import ActivityIn, ActivityList, ActivityOut, CheckpointIn, CheckpointWindowOut, PresenceCodeOut, StudentList, StudentOut, UserList
 from app.config import Settings
 from app.security import current_user, get_settings_dep, require_faculty
 from app.views import build_activity, build_record, load_activity_data, user_out, window_out
@@ -148,3 +148,25 @@ def open_checkpoint(
     session.add(window)
     session.commit()
     return window_out(window, {faculty.id: faculty})
+
+
+@router.get("/activities/{activity_id}/presence-code", response_model=PresenceCodeOut)
+def presence_code(
+    activity_id: str,
+    _: User = Depends(require_faculty),
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings_dep),
+) -> PresenceCodeOut:
+    """The code the faculty screen shows as a QR. Nothing is stored: it is recomputed from the secret."""
+    activity = get_activity(session, activity_id)
+    now = clock.now()
+    opens, closes = rules.presence_code_window(activity, rules.timing_from(settings))
+    if not (opens <= now <= closes):
+        raise errors.outside_window()
+    step = settings.presence_code_step_seconds
+    return PresenceCodeOut(
+        code=presence.make_code(settings.jwt_secret, activity.id, now, step),
+        expires_at=clock.to_iso(presence.step_ends_at(now, step)),
+        server_time=clock.to_iso(now),
+        step_seconds=step,
+    )

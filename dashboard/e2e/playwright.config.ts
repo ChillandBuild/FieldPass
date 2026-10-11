@@ -25,6 +25,7 @@ const browserName = selectedBrowser()
 export default defineConfig({
   testDir: import.meta.dirname,
   testMatch: '*.spec.ts',
+  testIgnore: '*.fixture.spec.ts',
   outputDir: path.resolve(import.meta.dirname, '../test-results'),
   globalSetup: './support/globalSetup.ts',
   globalTeardown: './support/globalTeardown.ts',

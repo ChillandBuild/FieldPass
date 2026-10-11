@@ -8,20 +8,22 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app import clock, devices, errors, liveness, rules
+from app import clock, devices, errors, liveness, presence, rules
 from app.config import Settings
 from app.db import get_session
 from app.device_keys import canonical_message, location_fingerprint, verify_signature
 from app.deps import get_face_engine, get_photo_store
 from app.face import NO_MATCH, FaceAnalysis, FaceEngine
 from app.geo import regions_verdict
-from app.models import Activity, Attempt, AttendanceEvent, CheckpointWindow, Enrollment, User, new_id
+from app.models import (
+    Activity, Attempt, AttendanceEvent, CheckpointWindow, Enrollment, PresenceScan, User, new_id,
+)
 from app.photo_store import PhotoStore
 from app.routers.activities import get_activity, require_on_roster
 from app.routers.enrollment import read_image, require_one_face
-from app.schemas import AttemptIn, AttemptOut, AttendanceEventOut
+from app.schemas import AttemptIn, AttemptOut, AttendanceEventOut, PresenceIn, PresenceOut
 from app.security import get_settings_dep, require_student
-from app.views import event_out
+from app.views import event_out, has_presence_scan
 
 router = APIRouter(tags=["attempts"])
 
@@ -80,6 +82,10 @@ def _event_for(session: Session, attempt_id: str) -> AttendanceEvent | None:
     return session.scalar(select(AttendanceEvent).where(AttendanceEvent.attempt_id == attempt_id))
 
 
+def _event_response(session: Session, event: AttendanceEvent) -> AttendanceEventOut:
+    return event_out(event, has_presence_scan(session, event.attempt_id, by=event.received_at))
+
+
 def _face_verdict(engine: FaceEngine, store: PhotoStore, enrollment: Enrollment, probe: bytes) -> str:
     return engine.compare(store.decrypt(enrollment.embedding_enc), probe)
 
@@ -106,11 +112,12 @@ def _integrity_reasons(is_mock: bool, rooted: bool, emulator: bool, repeated: bo
 
 def _build_event(
     attempt: Attempt, activity: Activity, now: datetime, loc: tuple[str, int, int, datetime], face: str,
-    extra_reasons: list[str], fingerprint: str | None,
+    extra_reasons: list[str], fingerprint: str | None, scan_settles_uncertain: bool,
 ) -> AttendanceEvent:
     loc_verdict, distance, accuracy, captured = loc
     reasons = []
-    if loc_verdict != "inside":
+    # A fresh scan settles an "uncertain" reading only. The stored verdict stays as measured, and "outside" stays.
+    if loc_verdict != "inside" and not (scan_settles_uncertain and loc_verdict == "uncertain"):
         reasons.append(f"location_{loc_verdict}")
     if face != "match":
         reasons.append("face_mismatch" if face == "no_match" else "face_uncertain")
@@ -186,7 +193,7 @@ def submit_attempt(
         raise errors.forbidden("This attempt belongs to someone else.")
     existing = _event_for(session, attempt.id)
     if existing is not None:
-        return event_out(existing)
+        return _event_response(session, existing)
     now = clock.now()
     if now > attempt.expires_at:
         raise errors.attempt_expired()
@@ -220,7 +227,7 @@ def submit_attempt(
         saved = _event_for(session, attempt.id)
         if saved is None:
             raise
-        return event_out(saved)
+        return _event_response(session, saved)
     regions = [(r.venue_lat, r.venue_lng, r.radius_m) for r in activity.venue_regions]
     verdict, distance = regions_verdict(lat, lng, accuracy_m, regions or [(activity.venue_lat, activity.venue_lng, activity.radius_m)])
     loc = (verdict, round(distance), round(accuracy_m), captured)
@@ -232,5 +239,39 @@ def submit_attempt(
     repeated = any(e.location_fingerprint == fingerprint for e in events)
     extra = _liveness_reasons(engine, analysis, turn_bytes, attempt.challenge, liveness.limits_from(settings))
     extra += _integrity_reasons(location_is_mock, device_rooted, device_emulator, repeated)
-    saved = _persist(session, _build_event(attempt, activity, now, loc, face, extra, fingerprint), enrollment.id)
-    return event_out(saved)
+    # The accuracy figure comes from the phone: above the cap a scan cannot vouch for the reading.
+    settles = accuracy_m <= settings.presence_code_max_accuracy_m and has_presence_scan(session, attempt.id, by=now)
+    saved = _persist(session, _build_event(attempt, activity, now, loc, face, extra, fingerprint, settles), enrollment.id)
+    return _event_response(session, saved)
+
+
+@router.post("/attempts/{attempt_id}/presence", response_model=PresenceOut)
+def scan_presence(
+    attempt_id: str,
+    body: PresenceIn,
+    student: User = Depends(require_student),
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings_dep),
+) -> PresenceOut:
+    """A scanned code only ever helps: a wrong or stale one answers verified=false and changes nothing."""
+    attempt = session.get(Attempt, attempt_id)
+    if attempt is None:
+        raise errors.not_found("That attempt does not exist.")
+    if attempt.student_id != student.id:
+        raise errors.forbidden("This attempt belongs to someone else.")
+    if _event_for(session, attempt.id) is not None:
+        return PresenceOut(verified=has_presence_scan(session, attempt.id))  # already submitted: nothing to change
+    now = clock.now()
+    if now > attempt.expires_at:
+        raise errors.attempt_expired()
+    if has_presence_scan(session, attempt.id):
+        return PresenceOut(verified=True)
+    step = settings.presence_code_step_seconds
+    if not presence.is_valid(settings.jwt_secret, attempt.activity_id, body.code, now, step):
+        return PresenceOut(verified=False)
+    session.add(PresenceScan(attempt_id=attempt.id, verified_at=now))
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()  # a concurrent scan of the same attempt won; the answer is the same
+    return PresenceOut(verified=True)

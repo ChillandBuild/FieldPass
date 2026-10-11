@@ -1,5 +1,5 @@
 import type { AttendanceEvent } from '../api'
-import { FACE_LABELS, LOCATION_LABELS } from '../lib/labels'
+import { FACE_LABELS, LOCATION_LABELS, PRESENCE_VERIFIED_LABEL } from '../lib/labels'
 import { formatDateTime } from '../lib/time'
 
 /** One automated observation: server receipt time and the check results in plain words. */
@@ -10,6 +10,7 @@ export function EventDetail({ event }: { event: AttendanceEvent }) {
       <div className="muted event-checks">
         {LOCATION_LABELS[event.location.verdict]}; {FACE_LABELS[event.face.verdict]}
       </div>
+      {event.presence_verified === true ? <p className="marker marker-ok">{PRESENCE_VERIFIED_LABEL}</p> : null}
     </div>
   )
 }

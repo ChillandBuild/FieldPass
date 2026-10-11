@@ -61,3 +61,6 @@ export const FACE_LABELS: Record<FaceVerdict, string> = {
   uncertain: 'Face comparison uncertain',
   no_match: 'Face comparison did not match',
 }
+
+/** Shown on an event when the student scanned a fresh presence code. Evidence, not proof. */
+export const PRESENCE_VERIFIED_LABEL = 'Code scanned'

@@ -10,6 +10,8 @@ import com.fieldpass.student.core.model.HealthResponse
 import com.fieldpass.student.core.model.Items
 import com.fieldpass.student.core.model.LoginRequest
 import com.fieldpass.student.core.model.LoginResponse
+import com.fieldpass.student.core.model.PresenceRequest
+import com.fieldpass.student.core.model.PresenceResponse
 import com.fieldpass.student.core.model.User
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -51,6 +53,9 @@ interface ApiService {
 
     @POST("api/v1/activities/{id}/attempts")
     suspend fun createAttempt(@Path("id") activityId: String, @Body body: AttemptRequest): Attempt
+
+    @POST("api/v1/attempts/{id}/presence")
+    suspend fun presence(@Path("id") attemptId: String, @Body body: PresenceRequest): PresenceResponse
 
     @Multipart
     @POST("api/v1/attempts/{id}/submit")

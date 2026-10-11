@@ -20,6 +20,7 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -107,6 +108,34 @@ class RealRepositoryTest {
         val req = server.takeRequest()
         assertEquals("/api/v1/activities/act_1/attempts", req.path)
         assertEquals("""{"action":"check_in"}""", req.body.readUtf8())
+    }
+
+    @Test fun presenceCodeIsPostedToTheAttemptPathWithTheBearerToken() = runTest {
+        session.save("tok1")
+        server.enqueue(json("""{"verified":true}"""))
+        assertTrue(repo.submitPresenceCode("att_1", "fp1.176000000.AbCd"))
+        val req = server.takeRequest()
+        assertEquals("POST", req.method)
+        assertEquals("/api/v1/attempts/att_1/presence", req.path)
+        assertEquals("Bearer tok1", req.getHeader("Authorization"))
+        assertEquals("""{"code":"fp1.176000000.AbCd"}""", req.body.readUtf8())
+    }
+
+    @Test fun presenceCodeThatIsWrongOrTooOldComesBackAsNotVerified() = runTest {
+        session.save("tok1")
+        server.enqueue(json("""{"verified":false}"""))
+        assertFalse(repo.submitPresenceCode("att_1", "fp1.1.old"))
+    }
+
+    @Test fun presenceErrorsUseTheEnvelope() = runTest {
+        session.save("tok1")
+        server.enqueue(json("""{"error":{"code":"attempt_expired","message":"Too late."}}""", 410))
+        try { repo.submitPresenceCode("att_1", "fp1.1.x"); fail() } catch (e: AppError) {
+            assertEquals(ErrorCode.ATTEMPT_EXPIRED, e.code)
+            assertEquals(410, e.httpStatus)
+        }
+        server.enqueue(json("""{"error":{"code":"not_found","message":"No such attempt."}}""", 404))
+        try { repo.submitPresenceCode("att_x", "fp1.1.x"); fail() } catch (e: AppError) { assertEquals(ErrorCode.NOT_FOUND, e.code) }
     }
 
     @Test fun errorEnvelopeBecomesTypedErrorWithoutLeakingBody() = runTest {

@@ -41,6 +41,7 @@ export interface AttendanceEventBody {
   review_reasons: string[]
   face: { verdict: string }
   location: { verdict: string }
+  presence_verified: boolean
 }
 
 function sampleBytes(name: Sample): Buffer {
@@ -163,6 +164,11 @@ export function createStudentApi(backendUrl: string) {
     return call('POST', `/attempts/${attemptId}/submit`, token, form)
   }
 
+  /** Posts a scanned presence code for an open attempt. Always 200 with `verified`; a wrong or stale code is false. */
+  async function scanPresence(token: string, attemptId: string, code: string): Promise<ApiResult<{ verified: boolean }>> {
+    return api.post<{ verified: boolean }>(`/attempts/${attemptId}/presence`, token, { code })
+  }
+
   /** Creates an attempt and submits it in one go; throws if either step is refused. */
   async function checkAction(token: string, activityId: string, action: string, opts: SubmitOptions) {
     const attempt = await createAttempt(token, activityId, action)
@@ -172,7 +178,7 @@ export function createStudentApi(backendUrl: string) {
     return { attemptId: attempt.body.id, event: event.body }
   }
 
-  return { api, login, enroll, approveAsFaculty, createAttempt, submitAttempt, checkAction }
+  return { api, login, enroll, approveAsFaculty, createAttempt, submitAttempt, scanPresence, checkAction }
 }
 
-export const { api, login, enroll, approveAsFaculty, createAttempt, submitAttempt, checkAction } = createStudentApi(BACKEND_URL)
+export const { api, login, enroll, approveAsFaculty, createAttempt, submitAttempt, scanPresence, checkAction } = createStudentApi(BACKEND_URL)

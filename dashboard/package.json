@@ -12,12 +12,14 @@
     "test": "vitest run",
     "screenshots": "node scripts/screenshots.mjs",
     "e2e": "playwright test -c e2e/playwright.config.ts",
+    "e2e:fixture": "playwright test -c e2e/playwright.fixture.config.ts",
     "e2e:firefox": "E2E_BROWSER=firefox playwright test -c e2e/playwright.config.ts",
     "e2e:webkit": "E2E_BROWSER=webkit playwright test -c e2e/playwright.config.ts",
     "e2e:browsers": "npm run e2e && npm run e2e:firefox && npm run e2e:webkit"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
+    "qrcode.react": "4.2.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-leaflet": "^5.0.0",

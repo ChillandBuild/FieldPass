@@ -37,6 +37,11 @@ def checkout_deadline(activity: Activity, timing: Timing = DEFAULT_TIMING) -> da
     return activity.ends_at + timing.checkout_grace
 
 
+def presence_code_window(activity: Activity, timing: Timing = DEFAULT_TIMING) -> tuple[datetime, datetime]:
+    """When the faculty screen may show a presence code: from check-in opening to the check-out deadline."""
+    return checkin_window(activity, timing)[0], checkout_deadline(activity, timing)
+
+
 def open_checkpoint(windows: Iterable[CheckpointWindow], now: datetime) -> CheckpointWindow | None:
     """The currently open window (opens_at <= now < closes_at), latest first."""
     live = [w for w in windows if w.opens_at <= now < w.closes_at]

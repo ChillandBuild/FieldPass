@@ -64,15 +64,19 @@ private fun EventLine(event: AttendanceEvent) {
         color = MaterialTheme.colorScheme.surfaceContainer,
         shape = MaterialTheme.shapes.small,
     ) {
-        Text(
-            stringResource(
-                R.string.event_at_format,
-                stringResource(StatusPresentation.eventLabel(event.action)),
-                TimeFormat.formatTime(event.receivedAt),
-            ) + " - " + stringResource(StatusPresentation.label(event.status)),
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(12.dp),
-        )
+        Column(Modifier.padding(12.dp)) {
+            Text(
+                stringResource(
+                    R.string.event_at_format,
+                    stringResource(StatusPresentation.eventLabel(event.action)),
+                    TimeFormat.formatTime(event.receivedAt),
+                ) + " - " + stringResource(StatusPresentation.label(event.status)),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            if (event.presenceVerified) {
+                Text(stringResource(R.string.presence_code_scanned), style = MaterialTheme.typography.bodySmall)
+            }
+        }
     }
 }
 

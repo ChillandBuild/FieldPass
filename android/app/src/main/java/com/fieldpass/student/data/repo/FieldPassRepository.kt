@@ -31,4 +31,10 @@ interface FieldPassRepository {
 
     suspend fun createAttempt(activityId: String, action: Action): Attempt
     suspend fun submitAttempt(attempt: Attempt, evidence: SubmitEvidence): AttendanceEvent
+
+    /**
+     * Sends a scanned faculty-screen code for [attemptId]. True = the server accepted it as fresh;
+     * false = wrong or too old (scan again). It is an extra signal only; callers never block on it.
+     */
+    suspend fun submitPresenceCode(attemptId: String, code: String): Boolean
 }

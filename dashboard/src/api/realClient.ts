@@ -14,6 +14,7 @@ import type {
   LoginResponse,
   Observation,
   ObservationInput,
+  PresenceCode,
   Register,
   Student,
   User,
@@ -113,6 +114,7 @@ export const realApi: Api = {
       body: { duration_minutes: durationMinutes },
     }),
   getRegister: (activityId) => json<Register>(`/activities/${encodeURIComponent(activityId)}/register`),
+  getPresenceCode: (activityId) => json<PresenceCode>(`/activities/${encodeURIComponent(activityId)}/presence-code`),
   decide: (activityId, studentId, input: DecisionInput) =>
     json<AttendanceRecord>(
       `/activities/${encodeURIComponent(activityId)}/students/${encodeURIComponent(studentId)}/decision`,

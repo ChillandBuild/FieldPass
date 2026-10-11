@@ -90,6 +90,8 @@ def flow_fixtures(api: Api) -> dict:
     api.clock.advance(minutes=3)
     api.attempt("student1", aid, "check_in")  # superseded attempt: still valid until it expires
     attempt = api.attempt("student1", aid, "check_in").json()
+    code = keep("presence_code", api.get("faculty1", f"/activities/{aid}/presence-code"), 200)["code"]
+    keep("presence", api.post("student1", f"/attempts/{attempt['id']}/presence", json={"code": code}), 200)
     keep("event_recorded", api.submit("student1", attempt["id"], face("asha")), 200)
     second = api.attempt("student2", aid, "check_in").json()
     keep("event_needs_review", api.submit("student2", second["id"], face("rohan~"), lat=offset_lat(105)), 200)

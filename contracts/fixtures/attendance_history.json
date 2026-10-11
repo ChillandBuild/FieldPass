@@ -1,7 +1,7 @@
 {
   "items": [
     {
-      "activity_id": "act_4dd8c4544aeb",
+      "activity_id": "act_844f60243baf",
       "activity_name": "Site Visit",
       "student": {
         "id": "u_s1",
@@ -11,9 +11,9 @@
       },
       "status": "recorded",
       "check_in": {
-        "id": "evt_5321975ddea3",
-        "attempt_id": "att_f2e9836a8c9a",
-        "activity_id": "act_4dd8c4544aeb",
+        "id": "evt_ee5b6c971f7d",
+        "attempt_id": "att_357febfd5b3c",
+        "activity_id": "act_844f60243baf",
         "student_id": "u_s1",
         "action": "check_in",
         "status": "recorded",
@@ -28,18 +28,19 @@
         },
         "face": {
           "verdict": "match"
-        }
+        },
+        "presence_verified": true
       },
       "checkpoints": [
         {
-          "id": "evt_8aae03cb0859",
-          "attempt_id": "att_1f4b3c3a8b61",
-          "activity_id": "act_4dd8c4544aeb",
+          "id": "evt_3012430fb3c3",
+          "attempt_id": "att_56ecc09b3fae",
+          "activity_id": "act_844f60243baf",
           "student_id": "u_s1",
           "action": "checkpoint",
           "status": "recorded",
           "received_at": "2026-10-10T09:44:00Z",
-          "checkpoint_id": "cp_a8cdf91b6f14",
+          "checkpoint_id": "cp_a807303ee9ef",
           "review_reasons": [],
           "location": {
             "verdict": "inside",
@@ -49,13 +50,14 @@
           },
           "face": {
             "verdict": "match"
-          }
+          },
+          "presence_verified": false
         }
       ],
       "check_out": {
-        "id": "evt_67a419a0bea5",
-        "attempt_id": "att_0bc37f79ca37",
-        "activity_id": "act_4dd8c4544aeb",
+        "id": "evt_7b670ad935e0",
+        "attempt_id": "att_c7d0a4927522",
+        "activity_id": "act_844f60243baf",
         "student_id": "u_s1",
         "action": "check_out",
         "status": "recorded",
@@ -70,7 +72,8 @@
         },
         "face": {
           "verdict": "match"
-        }
+        },
+        "presence_verified": false
       },
       "missing_checkout": false,
       "complete": true,

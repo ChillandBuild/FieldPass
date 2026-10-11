@@ -22,7 +22,7 @@ function ongoing(a: Activity, now: number): AttendanceRecord[] {
   return [
     finish({
       ...emptyRecord(a, asha), next_actions: [],
-      check_in: ev('e1', asha.id, 'check_in', t + 4 * MIN),
+      check_in: ev('e1', asha.id, 'check_in', t + 4 * MIN, { presence: true }),
       checkpoints: [ev('e2', asha.id, 'checkpoint', now - 36 * MIN, { checkpointId: 'cp_1' })],
       observations: [makeObservation('o1', a.id, asha.id, 'present', 'Signed the paper sheet at the gate', now - 20 * MIN)],
     }),
@@ -33,7 +33,7 @@ function ongoing(a: Activity, now: number): AttendanceRecord[] {
     }),
     finish({
       ...emptyRecord(a, fatima),
-      check_in: ev('e5', fatima.id, 'check_in', t + 6 * MIN),
+      check_in: ev('e5', fatima.id, 'check_in', t + 6 * MIN, { presence: true }),
       decision: makeDecision('d1', 'confirmed', 'Seen on site with the group', now - 10 * MIN, true),
       decision_history: [makeDecision('d1', 'confirmed', 'Seen on site with the group', now - 10 * MIN, true)],
     }),

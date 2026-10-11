@@ -31,6 +31,7 @@ interface EventSpec {
   reasons?: ReviewReason[]
   location?: 'inside' | 'uncertain' | 'outside'
   face?: 'match' | 'uncertain' | 'no_match'
+  presence?: boolean
 }
 
 export function makeEvent(spec: EventSpec): AttendanceEvent {
@@ -54,6 +55,7 @@ export function makeEvent(spec: EventSpec): AttendanceEvent {
       captured_at: iso(spec.at - 7_000),
     },
     face: { verdict: spec.face ?? 'match' },
+    presence_verified: spec.presence ?? false,
   }
 }
 

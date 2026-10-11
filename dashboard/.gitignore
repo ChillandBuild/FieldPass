@@ -4,3 +4,4 @@ dist
 *.local
 .vercel
 .env*
+test-results-fixture/
