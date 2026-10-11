@@ -6,7 +6,8 @@
 - `run.sh` binds `0.0.0.0:8000`. Plain uvicorn binds 127.0.0.1 and the phone can't reach it.
 - `CORS_ORIGINS` must contain the dashboard's exact origin; restart backend after editing. CORS allows only GET/POST/OPTIONS.
 - `ENABLE_DOCS` off by default → `/docs`, `/redoc`, `/openapi.json` return 404. `scripts/export_openapi.py` works either way.
-- Plain HTTP only. Android release build blocks cleartext, so only the **debug** build works against the laptop.
+- Laptop mode is plain HTTP, so only the **debug** APK works against it. The release build blocks cleartext and needs the hosted https address.
+- Hosted: Render free sleeps after 15 min (first request ~1 min); `render.yaml` runs `app.seed` in the build, so `DATABASE_URL` must be reachable at build time. Release signing reads `FIELDPASS_KEYSTORE*` env vars or untracked `android/keystore.properties`.
 - Losing `PHOTO_ENCRYPTION_KEY` makes stored photos unreadable. Changing `JWT_SECRET` signs everyone out.
 
 ## Timing rules (rules.py)
@@ -27,7 +28,8 @@
 - Error messages must never echo the URL (contains the password).
 - **Settings trap:** the settings loader reads `backend/.env` (real `DATABASE_URL`/`SUPABASE_*`) even for scripts that only set `DATABASE_PATH`, and an EMPTY environment variable overrides the `.env` value. Any script or test harness that boots the backend must blank `DATABASE_URL`, `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` (`android/scripts/integration-test.sh` and `dashboard/e2e/support/backend.ts` now do). Two accidental runs wrote test data into the production Supabase DB before this was found (see [[active-backlog]]).
 - Anti-cheat A adds columns; `create_all` never adds columns to existing tables, so existing DBs need the `ALTER TABLE` statements in `contracts/API.md` or a reset.
-- The README and known-limitations still describe SQLite only: see [[active-backlog]].
+- Only enrollment photos go to the bucket; attendance selfies never touch storage.
+- Faculty can upload an enrollment photo for a student (`POST /students/{id}/enrollment`, dashboard Students page). It is `pending`; approval stays a separate `identity_confirmed` step (invariant 5).
 
 ## Contracts are generated
 - `contracts/fixtures/*.json` come from `backend/scripts/generate_fixtures.py` (fake engine, fixed clock); `contracts/openapi.yaml` from `export_openapi.py`. **Regenerate both after any API change.**

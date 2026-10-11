@@ -5,7 +5,7 @@
 - **DB**: SQLite by default (`DATABASE_PATH`, WAL). Postgres/Supabase when `DATABASE_URL` is non-empty (`DATABASE_SCHEMA`, default `fieldpass`). See [[subsystem-notes]].
 - **Dashboard** (`dashboard/`): React 19, TypeScript, Vite, react-router 7. Node 22. Vitest + Playwright.
 - **Android** (`android/`): Kotlin 2.4, Compose M3, CameraX, Fused Location, Retrofit/OkHttp, minSdk 26, targetSdk 36. JDK 21.
-- **Hosting**: none. Laptop on a phone hotspot, plain HTTP, port 8000 (backend) / 5173 (dashboard).
+- **Hosting**: two modes. Laptop on a phone hotspot (plain HTTP, 8000/5173, debug APK only), or hosted: Render (`render.yaml`) + Supabase + Vercel + a signed release APK over https. Steps and settings: `backend/README.md` "Hosting", `android/README.md` "Release build". The hosted path has not been run on real services or a phone.
 
 ## Hard Invariants
 1. Automated checks only ever produce `recorded` or `needs_review`. Only a faculty decision produces `confirmed` / `not_confirmed` (reason required). (`routers/attempts.py` `_build_event`, `schemas.py`, API.md)

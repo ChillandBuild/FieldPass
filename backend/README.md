@@ -92,7 +92,8 @@ Deploy order matters, because each step needs a value from the one before:
 3. **Vercel.** Deploy `dashboard/` with `VITE_API_BASE_URL` set to the Render address (see `../dashboard/README.md`);
    leave `VITE_USE_FIXTURES` unset.
 4. **Render again.** Put the exact Vercel origin in `CORS_ORIGINS` and redeploy or restart.
-5. **Android.** Build and sign the APK against the Render address (`../android/README.md`, "Release build").
+5. **First data.** Sign in to the dashboard as `faculty1`. On the Students page use "Upload photo" for each student (or let students send their own from the phone), then approve each photo on the Enrollments page. Only enrollment photos go to the bucket; check-in selfies are never stored.
+6. **Android.** Build and sign the APK against the Render address (`../android/README.md`, "Release build").
 
 Generate the four secrets once with `python -m app.gen_secrets` (on any Python 3.11) and paste them into Render.
 Do not reuse the values from a laptop `.env`.

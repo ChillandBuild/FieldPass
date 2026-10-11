@@ -7,7 +7,7 @@ def test_openapi_documents_error_envelope_and_all_paths(app):
     doc = app.openapi()
     schemas = doc["components"]["schemas"]
     assert "ErrorOut" in schemas and "HTTPValidationError" not in schemas
-    assert len(doc["paths"]) == 22
+    assert len(doc["paths"]) == 23
     login = doc["paths"][f"{P}/auth/login"]["post"]["responses"]
     assert set(login) >= {"200", "401", "422", "429"}
     assert "401" not in doc["paths"][f"{P}/health"]["get"]["responses"]

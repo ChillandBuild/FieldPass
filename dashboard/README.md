@@ -63,7 +63,7 @@ Set `VITE_API_BASE_URL` in `.env.local` for local development. For a phone or an
 network, use the backend's LAN address and restart Vite after changing the value. The login page shows only
 username and password; it does not ask faculty to configure a server.
 
-For a Vercel build, configure `VITE_API_BASE_URL` as the public HTTPS origin of the deployed backend and
+On Vercel, import the repository and set **Root Directory** to `dashboard`, Framework Preset to Vite, Build Command `npm run build`, Output Directory `dist` (`vercel.json` already rewrites every path to `index.html`). Configure `VITE_API_BASE_URL` as the public HTTPS origin of the deployed backend and
 `VITE_USE_FIXTURES=false`. Vite embeds these values when it builds the frontend, so redeploy after changing
 them. If the API is available through a same-origin `/api/v1` rewrite, `VITE_API_BASE_URL` may be omitted.
 The existing backend handles authentication; its `DATABASE_URL` can point to Supabase Postgres.
