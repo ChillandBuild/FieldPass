@@ -163,6 +163,38 @@ export const fixtureApi: Api = {
     store = { ...store, activities: [activity, ...store.activities], rows: { ...store.rows, [activity.id]: roster.map((s) => emptyRecord(activity, s)) } }
     return copy(activity)
   },
+  updateActivity: async (id, input) => {
+    await wait(); requireFaculty()
+    const current = findActivity(id)
+    const dayStart = new Date(current.starts_at)
+    dayStart.setHours(0, 0, 0, 0)
+    if (Date.now() >= dayStart.getTime()) {
+      throw new ApiError('activity_locked', 'This activity can only be edited up to the day before it starts.', 409)
+    }
+    const roster = STUDENTS.filter((s) => input.student_ids.includes(s.id))
+    const updated: Activity = {
+      ...current, name: input.name, venue_name: input.venue_name, venue_lat: input.venue_lat, venue_lng: input.venue_lng,
+      radius_m: input.radius_m, venue_regions: input.venue_regions, starts_at: input.starts_at, ends_at: input.ends_at,
+      roster_count: roster.length,
+    }
+    const kept = new Map((store.rows[id] ?? []).map((r) => [r.student.id, r]))
+    store = {
+      ...store,
+      activities: store.activities.map((a) => (a.id === id ? updated : a)),
+      rows: { ...store.rows, [id]: roster.map((s) => kept.get(s.id) ?? emptyRecord(updated, s)) },
+    }
+    return copy(updated)
+  },
+  deleteActivity: async (id) => {
+    await wait(); requireFaculty()
+    findActivity(id)
+    if ((store.rows[id] ?? []).some((r) => r.check_in !== null)) {
+      throw new ApiError('activity_has_attendance', 'This activity has attendance records and cannot be deleted.', 409)
+    }
+    const rows = { ...store.rows }
+    delete rows[id]
+    store = { ...store, activities: store.activities.filter((a) => a.id !== id), rows }
+  },
   openCheckpoint: async (activityId, minutes) => {
     await wait(); requireFaculty()
     const a = findActivity(activityId)

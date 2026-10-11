@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, messageForError } from '../api'
 import { BoundarySummary } from '../components/BoundarySummary'
 import { CheckpointControl } from '../components/CheckpointControl'
@@ -14,11 +14,17 @@ export const REGISTER_POLL_MS = 5000
 
 export function RegisterScreen() {
   const { activityId = '' } = useParams()
+  const navigate = useNavigate()
   const [showBoundary, setShowBoundary] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const { data, isLoading, error, lastUpdated, refresh } = usePolling(() => api.getRegister(activityId), REGISTER_POLL_MS)
   const csv = useAsyncAction(async () => {
     const file = await api.exportCsv(activityId)
     saveBlob(file.blob, file.filename)
+  })
+  const remove = useAsyncAction(async () => {
+    await api.deleteActivity(activityId)
+    navigate('/activities')
   })
 
   if (isLoading && !data) return <Loading what="register" />
@@ -49,8 +55,25 @@ export function RegisterScreen() {
             Venue boundary
           </button>
           <Link className="btn btn-small" to="/about">What this system does and does not prove</Link>
+          <Link className="btn btn-small" to={`/activities/${activity.id}/edit`}>Edit details</Link>
+          <button type="button" className="btn btn-small btn-danger" aria-expanded={confirmDelete} onClick={() => setConfirmDelete((v) => !v)}>
+            Delete
+          </button>
         </div>
       </div>
+      {confirmDelete ? (
+        <Notice kind="warn">
+          Delete {activity.name}? This removes the activity and its roster and cannot be undone. An activity that already has
+          attendance records cannot be deleted.
+          <div className="btn-row">
+            <button type="button" className="btn btn-small btn-danger" disabled={remove.isBusy} onClick={() => { void remove.run() }}>
+              {remove.isBusy ? 'Deleting...' : 'Yes, delete'}
+            </button>
+            <button type="button" className="btn btn-small" disabled={remove.isBusy} onClick={() => setConfirmDelete(false)}>Keep it</button>
+          </div>
+        </Notice>
+      ) : null}
+      {remove.error ? <Notice kind="error">{remove.error}</Notice> : null}
       <dl className="register-summary" aria-label="Register summary">
         <div><dt>Roster</dt><dd>{activity.roster_count}<span>students</span></dd></div>
         <div><dt>Checked in</dt><dd>{rows.filter((row) => row.check_in !== null).length}<span>with an arrival recorded</span></dd></div>

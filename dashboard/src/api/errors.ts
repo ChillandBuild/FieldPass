@@ -8,6 +8,8 @@ export type ApiErrorCode =
   | 'outside_activity_window'
   | 'invalid_action_order'
   | 'checkpoint_not_open'
+  | 'activity_locked'
+  | 'activity_has_attendance'
   | 'already_decided'
   | 'already_enrolled'
   | 'attempt_expired'
@@ -47,6 +49,8 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   outside_activity_window: 'This activity is not open for that action right now.',
   invalid_action_order: 'That action is not allowed right now. A checkpoint window may already be open.',
   checkpoint_not_open: 'There is no open checkpoint window.',
+  activity_locked: 'This activity can only be edited up to the day before it starts.',
+  activity_has_attendance: 'This activity has attendance records, so it cannot be deleted.',
   already_decided: 'This enrollment has already been approved or rejected.',
   already_enrolled: 'This student already has an enrollment photo.',
   attempt_expired: 'That attempt has expired.',

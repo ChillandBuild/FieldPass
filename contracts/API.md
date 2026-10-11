@@ -36,6 +36,8 @@ Every non-2xx response has this body:
 | 409 | `outside_activity_window` | Activity is not open for this action right now |
 | 409 | `invalid_action_order` | e.g. check-out before check-in, second check-in |
 | 409 | `checkpoint_not_open` | No open checkpoint window, or already answered this one |
+| 409 | `activity_locked` | Edit refused: the activity's start day has begun (edits close at midnight campus time the day before) |
+| 409 | `activity_has_attendance` | Delete refused: the activity already has attendance records |
 | 409 | `already_decided` | Enrollment already approved/rejected |
 | 410 | `attempt_expired` | Attempt older than 90 s and never successfully submitted |
 | 413 | `image_too_large` | Photo over 5 MB |
@@ -209,6 +211,8 @@ checkpoint window; check-out from the check-in until `ends_at + 30 min`.
 | POST | `/activities` | faculty | `{"name", "venue_name", "venue_lat", "venue_lng", "radius_m" (default 100, 0–5000), "starts_at", "ends_at", "student_ids": [...]}` | `201 Activity` |
 | GET | `/activities` | any | — | `{"items": [Activity]}`. Student: assigned activities only, with `my_attendance`. Faculty: all |
 | GET | `/activities/{id}` | any | — | `Activity` (student must be on the roster) |
+| PUT | `/activities/{id}` | faculty | Same body as `POST /activities`. Replaces the details, venue regions and roster; checkpoint windows are untouched | `200 Activity`. `409 activity_locked` once the campus-local day of the activity's start has begun (edits close at 00:00 the day it starts, offset `CAMPUS_UTC_OFFSET_MINUTES`, default 330 = IST). `422 validation_error` if the new `starts_at` is not on a later day than today, or for an unknown student. `404 not_found` |
+| DELETE | `/activities/{id}` | faculty | — | `204`, no body. Removes the activity, its roster, checkpoint windows and venue regions. `409 activity_has_attendance` if it has any attempt, check-in, decision or observation; nothing changes then. `404 not_found` |
 | GET | `/activities/{id}/roster` | faculty | — | `{"items": [User]}` |
 | POST | `/activities/{id}/checkpoints` | faculty | `{"duration_minutes": 10}` (1–60, default 10) | `201 CheckpointWindow`. `409 checkpoint_not_open` is NOT used here; opening while one is open returns `409 invalid_action_order` |
 

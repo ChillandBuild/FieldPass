@@ -28,7 +28,7 @@ const KNOWN_CODES: readonly string[] = [
 ]
 
 interface RequestOptions {
-  method?: 'GET' | 'POST'
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
   body?: unknown
   form?: FormData
   auth?: boolean
@@ -107,6 +107,11 @@ export const realApi: Api = {
   listActivities: async () => (await json<{ items: Activity[] }>('/activities')).items,
   getActivity: (id) => json<Activity>(`/activities/${encodeURIComponent(id)}`),
   createActivity: (input: CreateActivityInput) => json<Activity>('/activities', { method: 'POST', body: input }),
+  updateActivity: (id, input: CreateActivityInput) =>
+    json<Activity>(`/activities/${encodeURIComponent(id)}`, { method: 'PUT', body: input }),
+  deleteActivity: async (id) => {
+    await send(`/activities/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  },
   openCheckpoint: (activityId, durationMinutes) =>
     json<CheckpointWindow>(`/activities/${encodeURIComponent(activityId)}/checkpoints`, {
       method: 'POST',

@@ -74,6 +74,8 @@ class Settings:
     liveness_mirrored: bool = False
     # False skips the head-turn check: one photo is judged on face and location only (LIVENESS_REQUIRED=false).
     liveness_required: bool = True
+    # Offset of the campus clock from UTC, used to find "the day before" an activity (330 = IST).
+    campus_utc_offset_minutes: int = 330
 
 
 def _read_env_file(path: Path) -> dict[str, str]:
@@ -211,6 +213,7 @@ def load_settings(env_file: Path | None = None, environ: dict[str, str] | None =
         liveness_turn_min_offset=turn_min,
         liveness_mirrored=env.get("LIVENESS_MIRRORED", "").strip().lower() in TRUE_WORDS,
         liveness_required=env.get("LIVENESS_REQUIRED", "true").strip().lower() not in FALSE_WORDS,
+        campus_utc_offset_minutes=int(_number(env, "CAMPUS_UTC_OFFSET_MINUTES", 330, int)),
     )
 
 

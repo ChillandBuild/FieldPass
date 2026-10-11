@@ -4,7 +4,7 @@ import { Loading } from './components/Notice'
 import { useSession } from './hooks/useSession'
 import { AboutScreen } from './screens/AboutScreen'
 import { ActivitiesScreen } from './screens/ActivitiesScreen'
-import { ActivityCreateScreen } from './screens/ActivityCreateScreen'
+import { ActivityCreateScreen, ActivityEditScreen } from './screens/ActivityCreateScreen'
 import { EnrollmentsScreen } from './screens/EnrollmentsScreen'
 import { LoginScreen } from './screens/LoginScreen'
 import { RegisterScreen } from './screens/RegisterScreen'
@@ -20,6 +20,7 @@ export function App() {
         <Route path="/enrollments" element={<EnrollmentsScreen />} />
         <Route path="/activities" element={<ActivitiesScreen />} />
         <Route path="/activities/new" element={<ActivityCreateScreen />} />
+        <Route path="/activities/:activityId/edit" element={<ActivityEditScreen />} />
         <Route path="/activities/:activityId" element={<RegisterScreen />} />
         <Route path="/students" element={<StudentsScreen />} />
         <Route path="/about" element={<AboutScreen />} />
