@@ -5,7 +5,7 @@ describe('error code mapping', () => {
     'invalid_credentials', 'not_authenticated', 'forbidden', 'not_assigned', 'not_found',
     'enrollment_not_approved', 'outside_activity_window', 'invalid_action_order', 'checkpoint_not_open',
     'already_decided', 'attempt_expired', 'image_too_large', 'validation_error', 'unusable_capture',
-    'multiple_faces', 'location_stale', 'network_error', 'unknown_error',
+    'multiple_faces', 'location_stale', 'device_key_required', 'network_error', 'unknown_error',
   ]
   it.each(codes)('maps %s to a non-empty friendly message', (code) => {
     const text = messageForError(new ApiError(code, 'server text that must be ignored', 400))

@@ -31,6 +31,8 @@ export interface SubmitOptions {
   lat?: number
   lng?: number
   accuracyM?: number
+  /** Report the location as mocked (fake GPS), as the phone would. */
+  isMock?: boolean
 }
 
 export interface AttendanceEventBody {
@@ -138,10 +140,14 @@ export function createStudentApi(backendUrl: string) {
     const lng = opts.lng ?? VENUE.lng
     const accuracyM = opts.accuracyM ?? 15
     const capturedEpoch = Math.floor(Date.now() / 1000)
+    const isMock = opts.isMock ?? false
     const owner = owners.get(token)
+    if (!owner) throw new Error('submitAttempt: this token was not issued by login() in this script, so no phone key can sign for it')
+    const nonce = nonces.get(attemptId)
+    if (!nonce) throw new Error(`submitAttempt: no nonce known for attempt ${attemptId}; create it with createAttempt() first`)
     const message = canonicalMessage({
-      attemptId, nonce: nonces.get(attemptId) ?? '', selfie, turn: selfie, lat, lng, accuracyM, capturedEpoch,
-      isMock: false, rooted: false, emulator: false,
+      attemptId, nonce, selfie, turn: selfie, lat, lng, accuracyM, capturedEpoch,
+      isMock, rooted: false, emulator: false,
     })
     const form = new FormData()
     form.append('selfie', jpeg(selfie), 'selfie.jpg')
@@ -150,10 +156,10 @@ export function createStudentApi(backendUrl: string) {
     form.append('lng', lng.toFixed(6))
     form.append('accuracy_m', accuracyM.toFixed(1))
     form.append('location_captured_at', new Date(capturedEpoch * 1000).toISOString().replace(/\.\d{3}Z$/, 'Z'))
-    form.append('location_is_mock', 'false')
+    form.append('location_is_mock', String(isMock))
     form.append('device_rooted', 'false')
     form.append('device_emulator', 'false')
-    form.append('signature', owner ? sign('sha256', message, keyFor(owner)).toString('base64') : 'AAAA')
+    form.append('signature', sign('sha256', message, { key: keyFor(owner), dsaEncoding: 'der' }).toString('base64'))
     return call('POST', `/attempts/${attemptId}/submit`, token, form)
   }
 

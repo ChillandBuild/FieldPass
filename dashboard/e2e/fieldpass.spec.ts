@@ -162,15 +162,18 @@ test('6. check-out, then faculty confirms with a reason', async () => {
   expect((await myRecord(s.student1)).status).toBe('confirmed')
 })
 
-test('7a. a different person\'s face leads to Needs review with a face reason', async () => {
-  const done = await checkAction(s.student2, s.activityId, 'check_in', { photo: 'person_a_1' })
-  test.info().annotations.push({ type: 'real engine verdict, different person', description: done.event.face.verdict })
-  expect(['no_match', 'uncertain']).toContain(done.event.face.verdict)
+// The needs_review row for Rohan that tests 10 and 10b build on comes from a mocked-GPS check-in. That does not
+// depend on the face engine: Rohan submits his own enrolment photo and the phone reports fake GPS. (A clearly
+// different face is refused with 422 face_not_matched and nothing recorded; that is engine-dependent, so it is
+// proven in backend/tests, not here.)
+test('7a. a check-in with fake GPS leads to Needs review with a location_mocked reason', async () => {
+  const done = await checkAction(s.student2, s.activityId, 'check_in', { photo: 'person_b', isMock: true })
   expect(done.event.status).toBe('needs_review')
+  expect(done.event.review_reasons).toContain('location_mocked')
 
   const row = registerRow(s.page, 'Rohan Iyer')
   await expect(row.locator('.badge')).toHaveText('Needs review', { timeout: 20_000 })
-  await expect(row.getByRole('list', { name: /Review reasons/ })).toContainText(/Face comparison (did not match|uncertain)/)
+  await expect(row.getByRole('list', { name: /Review reasons/ })).toContainText('Fake GPS was on')
 })
 
 test('7b. the right face far outside the boundary leads to Needs review with a location reason', async () => {
@@ -219,7 +222,7 @@ test('9. an in-person observation shows separately from automated observations',
 test('10. a decline followed by a confirm keeps both decisions; the newest is shown', async () => {
   const row = registerRow(s.page, 'Rohan Iyer')
   await row.getByRole('button', { name: /Confirm or decline attendance/ }).click()
-  await row.getByLabel('Reason (required)').fill('Selfie did not look like the enrolled photo')
+  await row.getByLabel('Reason (required)').fill('Fake GPS was on, location cannot be trusted')
   await row.getByRole('button', { name: 'Decline attendance' }).click()
   await expect(row.locator('.badge')).toHaveText('Not confirmed by faculty')
 
@@ -230,7 +233,7 @@ test('10. a decline followed by a confirm keeps both decisions; the newest is sh
   await expect(row.locator('.decision')).toContainText('Reason: Checked in person, it was Rohan')
 
   const earlier = row.locator('details.earlier-decisions')
-  await expect(earlier).toContainText('Selfie did not look like the enrolled photo')
+  await expect(earlier).toContainText('Fake GPS was on, location cannot be trusted')
   await expect(earlier).toContainText('Not confirmed')
 
   const mine = await myRecord(s.student2)
@@ -245,7 +248,7 @@ test('10b. new automated evidence after a decision marks it outdated, history in
   await expect(row.locator('.decision-outdated')).toContainText('Outdated decision, new evidence arrived', { timeout: 20_000 })
   await expect(row.locator('.decision-outdated')).toContainText('Checked in person, it was Rohan')
   await expect(row.locator('.badge')).toHaveText('Needs review')
-  await expect(row.locator('details.earlier-decisions')).toContainText('Selfie did not look like the enrolled photo')
+  await expect(row.locator('details.earlier-decisions')).toContainText('Fake GPS was on, location cannot be trusted')
 })
 
 test('11. CSV download has a proper name and one line per rostered student', async () => {

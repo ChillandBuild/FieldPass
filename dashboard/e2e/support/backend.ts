@@ -70,10 +70,6 @@ interface LaunchOptions {
  */
 async function launchBackend({ port, stateFile, settings }: LaunchOptions): Promise<void> {
   if (!existsSync(PYTHON)) throw new Error(`Backend virtualenv missing: ${PYTHON}`)
-  if (!existsSync(path.join(BACKEND_DIR, 'models/face_recognition_sface_2021dec.onnx'))) {
-    const dl = spawnSync(PYTHON, ['scripts/download_models.py'], { cwd: BACKEND_DIR, stdio: 'inherit' })
-    if (dl.status !== 0) throw new Error('Model download failed')
-  }
   const tempDir = mkdtempSync(path.join(tmpdir(), 'fieldpass-e2e-'))
   const password = readSetting('SEED_PASSWORD')
   const facultyPassword = readSetting('FACULTY_SEED_PASSWORD')
@@ -82,16 +78,29 @@ async function launchBackend({ port, stateFile, settings }: LaunchOptions): Prom
     DATABASE_PATH: path.join(tempDir, 'e2e.db'),
     PHOTO_DIR: path.join(tempDir, 'photos'),
     CORS_ORIGINS: DASHBOARD_ORIGIN,
-    // Never reach a real database or storage bucket from backend/.env: these must be blank so the backend
-    // uses the throwaway SQLite file and local photo folder above.
-    DATABASE_URL: '',
-    SUPABASE_URL: '',
-    SUPABASE_SERVICE_KEY: '',
     // There are no turned-head sample photos, so the e2e sends the selfie twice and the turn rule is opened
     // wide. backend/tests/test_liveness.py proves the rule itself.
     LIVENESS_FRONT_MAX_OFFSET: '9',
     LIVENESS_TURN_MIN_OFFSET: '-9',
     ...settings,
+    // Never reach a real database or storage bucket from backend/.env: these must be blank so the backend
+    // uses the throwaway SQLite file and local photo folder above. Last, so nothing can override them.
+    DATABASE_URL: '',
+    SUPABASE_URL: '',
+    SUPABASE_SERVICE_KEY: '',
+  }
+  for (const name of ['DATABASE_URL', 'SUPABASE_URL', 'SUPABASE_SERVICE_KEY'] as const) {
+    if (env[name] !== '') {
+      rmSync(tempDir, { recursive: true, force: true })
+      throw new Error(`${name} must be blank for the e2e backend`)
+    }
+  }
+  if (!existsSync(path.join(BACKEND_DIR, 'models/face_recognition_sface_2021dec.onnx'))) {
+    const dl = spawnSync(PYTHON, ['scripts/download_models.py'], { cwd: BACKEND_DIR, env, stdio: 'inherit' })
+    if (dl.status !== 0) {
+      rmSync(tempDir, { recursive: true, force: true })
+      throw new Error('Model download failed')
+    }
   }
   const seed = spawnSync(PYTHON, ['-m', 'app.seed'], { cwd: BACKEND_DIR, env, encoding: 'utf-8' })
   if (seed.status !== 0) {
@@ -119,7 +128,14 @@ function haltBackend(stateFile: string): void {
   if (!existsSync(stateFile)) return
   const state = JSON.parse(readFileSync(stateFile, 'utf-8')) as State
   try {
-    if (state.pid) process.kill(-state.pid, 'SIGTERM')
+    if (state.pid) {
+      if (process.platform === 'win32') {
+        // No process groups on Windows: end the whole tree (uvicorn may have child processes).
+        spawnSync('taskkill', ['/pid', String(state.pid), '/T', '/F'], { stdio: 'ignore' })
+      } else {
+        process.kill(-state.pid, 'SIGTERM')
+      }
+    }
   } catch {
     // already gone
   }
