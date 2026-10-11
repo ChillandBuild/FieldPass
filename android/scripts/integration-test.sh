@@ -21,8 +21,22 @@ cleanup() {
 trap cleanup EXIT
 
 PY="$BACKEND/.venv/bin/python"
+[ -x "$PY" ] || PY="$BACKEND/.venv/Scripts/python.exe"
 [ -x "$PY" ] || { echo "backend venv missing: see backend/README.md" >&2; exit 1; }
-[ -f "$BACKEND/models/face_detection_yunet_2023mar.onnx" ] || "$PY" "$BACKEND/scripts/download_models.py"
+
+# SAFETY: backend/.env may hold a REAL production DATABASE_URL / SUPABASE_*. Every backend process this script
+# starts (seed, uvicorn, model download) gets these three blanked, after any caller-supplied settings, so the
+# throw-away SQLite database is always used. The guard below proves it before anything starts.
+BLANK_REMOTE=(DATABASE_URL= SUPABASE_URL= SUPABASE_SERVICE_KEY=)
+EFFECTIVE="$(cd "$BACKEND" && env "${BLANK_REMOTE[@]}" "$PY" -c '
+from app.config import load_settings
+s = load_settings()
+print(f"database_url={s.database_url!r} supabase_url={s.supabase_url!r} supabase_service_key_set={bool(s.supabase_service_key)}")
+raise SystemExit(1 if (s.database_url or s.supabase_url or s.supabase_service_key) else 0)
+')" || { echo "refusing to run: a remote database or Supabase setting is still active (${EFFECTIVE:-settings failed to load})" >&2; exit 1; }
+echo "[integration] effective remote settings: $EFFECTIVE"
+
+[ -f "$BACKEND/models/face_detection_yunet_2023mar.onnx" ] || (cd "$BACKEND" && env "${BLANK_REMOTE[@]}" "$PY" "$BACKEND/scripts/download_models.py")
 
 # Face image: sample from backend/tests/samples, else OpenCV's lena.jpg into the temp dir.
 FACE="$BACKEND/tests/samples/lena.jpg"
@@ -46,8 +60,8 @@ FACULTY_PASSWORD="$(read_setting FACULTY_SEED_PASSWORD)"
 start_backend() {
   local data="$TMP/data-$1"; shift
   mkdir -p "$data"
-  (cd "$BACKEND" && env DATABASE_PATH="$data/fieldpass.db" PHOTO_DIR="$data/photos" "$@" "$PY" -m app.seed >/dev/null)
-  (cd "$BACKEND" && exec env DATABASE_PATH="$data/fieldpass.db" PHOTO_DIR="$data/photos" "$@" \
+  (cd "$BACKEND" && env DATABASE_PATH="$data/fieldpass.db" PHOTO_DIR="$data/photos" "$@" "${BLANK_REMOTE[@]}" "$PY" -m app.seed >/dev/null)
+  (cd "$BACKEND" && exec env DATABASE_PATH="$data/fieldpass.db" PHOTO_DIR="$data/photos" "$@" "${BLANK_REMOTE[@]}" \
     "$PY" -m uvicorn app.main:app --host 127.0.0.1 --port "$PORT" >"$data/server.log" 2>&1) &
   SERVER_PID=$!
   for _ in $(seq 1 40); do
