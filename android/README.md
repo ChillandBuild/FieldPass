@@ -135,8 +135,10 @@ phones refuse to install. With only some set, the build stops and names the miss
 $ANDROID_HOME/build-tools/36.0.0/apksigner verify --print-certs app/build/outputs/apk/release/app-release.apk
 ```
 
-The build refuses a missing or non-https address. Bump `versionCode` in `app/build.gradle.kts` for every APK you
-hand out: a phone will not install an APK over an installed one with an equal or lower `versionCode`.
+The build refuses a missing or non-https address. `versionCode` and `versionName` (`0.1.<n>`) are derived from git:
+`<n>` is the number of commits that touched `android/`, so every committed app change bumps the version automatically
+and every clone at the same commit builds the same one. Commit before you build an APK you hand out: a phone will not
+install an APK over an installed one with an equal or lower `versionCode`, and uncommitted edits do not bump it.
 
 **4. Share the `.apk` file** (chat, drive, link). On the phone, open it and allow "install unknown apps" for the app
 that opened it. A debug build and a release build have different signatures, so uninstall one before installing the
