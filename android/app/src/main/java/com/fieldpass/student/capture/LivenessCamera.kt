@@ -12,10 +12,14 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -159,14 +164,10 @@ fun LivenessCamera(
     }
 
     Column(modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text(stringResource(R.string.liveness_step, stepNumber(session.guide.step), STEP_COUNT), style = MaterialTheme.typography.labelLarge)
-        Text(
-            stringResource(promptFor(session, challenge)),
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-        )
+        // The prompt sits ON the preview: the screen scrolls, and a prompt above the preview scrolled out of view.
+        Box(Modifier.fillMaxWidth().aspectRatio(3f / 4f)) {
         AndroidView(
-            modifier = Modifier.fillMaxWidth().aspectRatio(3f / 4f).semantics { contentDescription = previewDescription },
+            modifier = Modifier.fillMaxSize().semantics { contentDescription = previewDescription },
             factory = { ctx ->
                 PreviewView(ctx).apply {
                     scaleType = PreviewView.ScaleType.FILL_CENTER
@@ -186,6 +187,17 @@ fun LivenessCamera(
                 }
             },
         )
+        Column(
+            Modifier.align(Alignment.TopCenter).fillMaxWidth().background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)).padding(12.dp),
+        ) {
+            Text(stringResource(R.string.liveness_step, stepNumber(session.guide.step), STEP_COUNT), style = MaterialTheme.typography.labelLarge)
+            Text(
+                stringResource(promptFor(session, challenge)),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+            )
+        }
+        }
         if (stuck) SecondaryButton(stringResource(R.string.liveness_take_one_photo), onUseOnePhoto)
     }
 }
