@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import logging
+
 import pytest
 
+from app.config import ConfigError
 from app.liveness import LivenessLimits, head_turn_ok, nose_offset_from_landmarks
 from tests.fakes import BLANK, TWO_FACES, face
 from tests.test_timing_settings import load
@@ -61,6 +64,26 @@ def test_liveness_settings_defaults(tmp_path):
 def test_liveness_settings_from_env(tmp_path):
     s = load(tmp_path, LIVENESS_FRONT_MAX_OFFSET="0.1", LIVENESS_TURN_MIN_OFFSET="0.3", LIVENESS_MIRRORED="true")
     assert (s.liveness_front_max_offset, s.liveness_turn_min_offset, s.liveness_mirrored) == (0.1, 0.3, True)
+
+
+@pytest.mark.parametrize("key", ["LIVENESS_FRONT_MAX_OFFSET", "LIVENESS_TURN_MIN_OFFSET"])
+@pytest.mark.parametrize("bad", ["nan", "inf", "-inf"])
+def test_non_finite_liveness_offsets_are_rejected(tmp_path, key, bad):
+    with pytest.raises(ConfigError, match=key):
+        load(tmp_path, **{key: bad})
+
+
+def test_front_max_at_or_above_turn_min_logs_a_warning(tmp_path, caplog):
+    with caplog.at_level(logging.WARNING, logger="fieldpass"):
+        s = load(tmp_path, LIVENESS_FRONT_MAX_OFFSET="9", LIVENESS_TURN_MIN_OFFSET="-9")
+    assert (s.liveness_front_max_offset, s.liveness_turn_min_offset) == (9.0, -9.0)  # allowed, not an error
+    assert "head-turn check cannot fail for a single photo" in caplog.text
+
+
+def test_default_liveness_offsets_log_no_warning(tmp_path, caplog):
+    with caplog.at_level(logging.WARNING, logger="fieldpass"):
+        load(tmp_path)
+    assert "head-turn check" not in caplog.text
 
 
 # ---- through the API -------------------------------------------------------
