@@ -144,7 +144,6 @@ dependencies {
     implementation(libs.camerax.camera2)
     implementation(libs.camerax.lifecycle)
     implementation(libs.camerax.view)
-    implementation(libs.mlkit.face.detection)
     implementation(libs.play.services.location)
     implementation(libs.coroutines.android)
     implementation(libs.coroutines.play.services)
