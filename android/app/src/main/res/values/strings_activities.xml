@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="activities_title">Your activities</string>
+    <string name="activities_other_title">Other activities</string>
+    <string name="activity_today_label">Today’s activity</string>
+    <string name="activity_next_label">Next activity</string>
+    <string name="activity_until_format">%1$s · Until %2$s</string>
     <string name="activities_empty">No activities are assigned to you yet. Pull down to refresh.</string>
     <string name="activities_enrollment_notice">Your face photo is not approved yet, so you cannot check in. Open My photo to see where it stands.</string>
     <string name="activities_open_photo">Open My photo</string>

@@ -9,9 +9,14 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.fieldpass.student.R
 
 private val Light = lightColorScheme(
     primary = Color(0xFFBD0B50),
@@ -87,13 +92,45 @@ private val Dark = darkColorScheme(
     inversePrimary = Color(0xFFBD0B50),
 )
 
+/**
+ * Both files are variable fonts (SIL Open Font License). The weight axis must be set explicitly:
+ * without it every entry draws the file's default weight.
+ */
+private fun variableFont(resId: Int, weight: FontWeight) =
+    Font(resId, weight = weight, variationSettings = FontVariation.Settings(FontVariation.weight(weight.weight)))
+
+private val HeadingFamily = FontFamily(
+    variableFont(R.font.inter, FontWeight.Normal),
+    variableFont(R.font.inter, FontWeight.SemiBold),
+    variableFont(R.font.inter, FontWeight.Bold),
+)
+private val BodyFamily = FontFamily(
+    variableFont(R.font.figtree, FontWeight.Normal),
+    variableFont(R.font.figtree, FontWeight.Medium),
+    variableFont(R.font.figtree, FontWeight.SemiBold),
+    variableFont(R.font.figtree, FontWeight.Bold),
+)
+
+private fun TextStyle.heading() = copy(fontFamily = HeadingFamily)
+private fun TextStyle.body() = copy(fontFamily = BodyFamily)
+
 private val CampusTypography = Typography().let { base ->
     base.copy(
-        displaySmall = base.displaySmall.copy(fontWeight = FontWeight.Bold, letterSpacing = (-1).sp),
-        headlineSmall = base.headlineSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp),
-        titleLarge = base.titleLarge.copy(fontWeight = FontWeight.Bold, letterSpacing = (-0.3).sp),
-        titleMedium = base.titleMedium.copy(fontWeight = FontWeight.SemiBold, fontSize = 18.sp, lineHeight = 24.sp),
-        labelLarge = base.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+        displayLarge = base.displayLarge.heading(),
+        displayMedium = base.displayMedium.heading(),
+        displaySmall = base.displaySmall.heading().copy(fontWeight = FontWeight.Bold, letterSpacing = (-1).sp),
+        headlineLarge = base.headlineLarge.heading(),
+        headlineMedium = base.headlineMedium.heading(),
+        headlineSmall = base.headlineSmall.heading().copy(fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp),
+        titleLarge = base.titleLarge.heading().copy(fontWeight = FontWeight.Bold, letterSpacing = (-0.3).sp),
+        titleMedium = base.titleMedium.body().copy(fontWeight = FontWeight.SemiBold, fontSize = 18.sp, lineHeight = 24.sp),
+        titleSmall = base.titleSmall.body(),
+        bodyLarge = base.bodyLarge.body(),
+        bodyMedium = base.bodyMedium.body(),
+        bodySmall = base.bodySmall.body(),
+        labelLarge = base.labelLarge.body().copy(fontWeight = FontWeight.SemiBold),
+        labelMedium = base.labelMedium.body(),
+        labelSmall = base.labelSmall.body(),
     )
 }
 
