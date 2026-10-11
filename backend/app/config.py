@@ -32,6 +32,7 @@ MAX_WINDOW_MINUTES = 7 * 24 * 60  # an activity lasts at most 7 days; a longer l
 REQUIRED_SECRETS = ("JWT_SECRET", "PHOTO_ENCRYPTION_KEY", "SEED_PASSWORD", "FACULTY_SEED_PASSWORD")
 MIN_JWT_SECRET_CHARS = 32
 TRUE_WORDS = ("1", "true", "yes", "on")
+FALSE_WORDS = ("0", "false", "no", "off")
 
 DEFAULT_DATABASE_SCHEMA = "fieldpass"
 SCHEMA_PATTERN = re.compile(r"[a-z_][a-z0-9_]{0,62}")  # a plain lower-case Postgres identifier, safe to quote
@@ -71,6 +72,8 @@ class Settings:
     liveness_front_max_offset: float = DEFAULT_LIVENESS_FRONT_MAX_OFFSET
     liveness_turn_min_offset: float = DEFAULT_LIVENESS_TURN_MIN_OFFSET
     liveness_mirrored: bool = False
+    # False skips the head-turn check: one photo is judged on face and location only (LIVENESS_REQUIRED=false).
+    liveness_required: bool = True
 
 
 def _read_env_file(path: Path) -> dict[str, str]:
@@ -207,6 +210,7 @@ def load_settings(env_file: Path | None = None, environ: dict[str, str] | None =
         liveness_front_max_offset=front_max,
         liveness_turn_min_offset=turn_min,
         liveness_mirrored=env.get("LIVENESS_MIRRORED", "").strip().lower() in TRUE_WORDS,
+        liveness_required=env.get("LIVENESS_REQUIRED", "true").strip().lower() not in FALSE_WORDS,
     )
 
 

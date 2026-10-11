@@ -86,6 +86,13 @@ def test_default_liveness_offsets_log_no_warning(tmp_path, caplog):
     assert "head-turn check" not in caplog.text
 
 
+def test_liveness_is_required_unless_switched_off(tmp_path):
+    assert load(tmp_path).liveness_required is True
+    assert load(tmp_path, LIVENESS_REQUIRED="false").liveness_required is False
+    assert load(tmp_path, LIVENESS_REQUIRED="off").liveness_required is False
+    assert load(tmp_path, LIVENESS_REQUIRED="true").liveness_required is True
+
+
 # ---- through the API -------------------------------------------------------
 
 @pytest.fixture()
@@ -108,6 +115,15 @@ def opposite(challenge: str) -> str:
 
 def test_correct_turn_is_recorded(api, ready):
     body = submit_with_turn(api, ready, lambda c: face(f"asha@{c}"))
+    assert (body["status"], body["review_reasons"]) == ("recorded", [])
+
+
+def test_one_photo_is_enough_when_liveness_is_switched_off(api, app, ready):
+    from dataclasses import replace
+
+    app.state.settings = replace(app.state.settings, liveness_required=False)
+    # The app sends the same photo as both parts; with the head-turn check off that is a normal check-in.
+    body = submit_with_turn(api, ready, lambda c: face("asha"))
     assert (body["status"], body["review_reasons"]) == ("recorded", [])
 
 

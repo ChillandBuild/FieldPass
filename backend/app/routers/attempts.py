@@ -230,7 +230,10 @@ def submit_attempt(
         raise errors.face_not_matched()
     fingerprint = location_fingerprint(lat, lng)
     repeated = any(e.location_fingerprint == fingerprint for e in events)
-    extra = _liveness_reasons(engine, analysis, turn_bytes, attempt.challenge, liveness.limits_from(settings))
+    extra = (
+        _liveness_reasons(engine, analysis, turn_bytes, attempt.challenge, liveness.limits_from(settings))
+        if settings.liveness_required else []
+    )
     extra += _integrity_reasons(location_is_mock, device_rooted, device_emulator, repeated)
     saved = _persist(session, _build_event(attempt, activity, now, loc, face, extra, fingerprint), enrollment.id)
     return event_out(saved)
