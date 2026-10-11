@@ -1,6 +1,7 @@
 """Environment-driven settings. Fails fast when a required secret is missing."""
 from __future__ import annotations
 
+import logging
 import math
 import os
 import re
@@ -12,6 +13,7 @@ from cryptography.fernet import Fernet
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.exc import ArgumentError
 
+log = logging.getLogger("fieldpass")
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 
 # SFace cosine-similarity threshold from the official OpenCV sample
@@ -20,6 +22,8 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_FACE_MATCH_THRESHOLD = 0.363
 DEFAULT_FACE_UNCERTAIN_MARGIN = 0.1
 DEFAULT_FACE_DETECT_SCORE = 0.9
+DEFAULT_LIVENESS_FRONT_MAX_OFFSET = 0.12
+DEFAULT_LIVENESS_TURN_MIN_OFFSET = 0.25
 
 DEFAULT_CHECKIN_LEAD_MINUTES = 15.0
 DEFAULT_CHECKOUT_GRACE_MINUTES = 30.0
@@ -64,6 +68,9 @@ class Settings:
     photo_bucket: str = "enrollment-photos"
     # Minimum YuNet confidence for a face to count. Lower is more forgiving of close-up or dim selfies.
     face_detect_score: float = DEFAULT_FACE_DETECT_SCORE
+    liveness_front_max_offset: float = DEFAULT_LIVENESS_FRONT_MAX_OFFSET
+    liveness_turn_min_offset: float = DEFAULT_LIVENESS_TURN_MIN_OFFSET
+    liveness_mirrored: bool = False
 
 
 def _read_env_file(path: Path) -> dict[str, str]:
@@ -99,6 +106,14 @@ def _minutes(env: dict[str, str], key: str, default: float) -> float:
     value = float(_number(env, key, default, float))
     if not math.isfinite(value) or value < 0 or value > MAX_WINDOW_MINUTES:
         raise ConfigError(f"{key} must be between 0 and {MAX_WINDOW_MINUTES} minutes, got {env.get(key)!r}")
+    return value
+
+
+def _finite(env: dict[str, str], key: str, default: float) -> float:
+    """A finite number (nan and inf would silently turn the head-turn rule into always-pass or always-fail)."""
+    value = float(_number(env, key, default, float))
+    if not math.isfinite(value):
+        raise ConfigError(f"{key} must be a finite number, got {env.get(key)!r}")
     return value
 
 
@@ -158,6 +173,13 @@ def load_settings(env_file: Path | None = None, environ: dict[str, str] | None =
             + ". Copy backend/.env.example to backend/.env and run `python -m app.gen_secrets`."
         )
     _check_secrets(env)
+    front_max = _finite(env, "LIVENESS_FRONT_MAX_OFFSET", DEFAULT_LIVENESS_FRONT_MAX_OFFSET)
+    turn_min = _finite(env, "LIVENESS_TURN_MIN_OFFSET", DEFAULT_LIVENESS_TURN_MIN_OFFSET)
+    if front_max >= turn_min:
+        log.warning(
+            "LIVENESS_FRONT_MAX_OFFSET (%s) >= LIVENESS_TURN_MIN_OFFSET (%s): "
+            "the head-turn check cannot fail for a single photo.", front_max, turn_min,
+        )
     origins = tuple(o.strip() for o in env.get("CORS_ORIGINS", "").split(",") if o.strip())
     return Settings(
         jwt_secret=env["JWT_SECRET"],
@@ -182,6 +204,9 @@ def load_settings(env_file: Path | None = None, environ: dict[str, str] | None =
         supabase_service_key=env.get("SUPABASE_SERVICE_KEY", "").strip(),
         photo_bucket=env.get("SUPABASE_PHOTO_BUCKET", "").strip() or "enrollment-photos",
         face_detect_score=float(_number(env, "FACE_DETECT_SCORE", DEFAULT_FACE_DETECT_SCORE, float)),
+        liveness_front_max_offset=front_max,
+        liveness_turn_min_offset=turn_min,
+        liveness_mirrored=env.get("LIVENESS_MIRRORED", "").strip().lower() in TRUE_WORDS,
     )
 
 

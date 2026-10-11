@@ -99,6 +99,7 @@ def test_unique_clash_on_commit_is_retried_cleanly(api, app, settings, monkeypat
             raise IntegrityError("insert", {}, Exception("UNIQUE constraint failed: enrollments.student_id"))
         return real_commit(self)
 
+    api.auth("student1")  # log in (binds the phone) before commit is sabotaged
     monkeypatch.setattr(Session, "commit", flaky)
     resp = upload(api, "student1", "asha")
     assert resp.status_code == 201
@@ -110,6 +111,7 @@ def test_persistent_clash_gives_a_clean_error_and_leaves_no_file(api, app, setti
         self.rollback()
         raise IntegrityError("insert", {}, Exception("UNIQUE constraint failed"))
 
+    api.auth("student1")  # log in (binds the phone) before commit is sabotaged
     monkeypatch.setattr(Session, "commit", always)
     resp = upload(api, "student1", "asha")
     assert resp.status_code == 409 and resp.json()["error"]["code"] == "invalid_action_order"
@@ -120,6 +122,7 @@ def test_failure_while_saving_leaves_no_orphan_file(api, settings, monkeypatch):
     def boom(self):
         raise RuntimeError("db down")
 
+    api.auth("student1")  # log in (binds the phone) before commit is sabotaged
     monkeypatch.setattr(Session, "commit", boom)
     assert upload(api, "student1", "asha").status_code == 500
     assert enc_files(settings) == []

@@ -6,6 +6,8 @@ data class LocationFix(
     val lng: Double,
     val accuracyM: Double,
     val capturedAt: String,
+    /** True when Android says this reading came from a mock ("fake GPS") provider. */
+    val isMock: Boolean = false,
 ) {
     val isPoorAccuracy: Boolean get() = accuracyM > POOR_ACCURACY_THRESHOLD_M
 

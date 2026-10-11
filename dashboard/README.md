@@ -102,6 +102,10 @@ The script fails if any page overflows horizontally at 320, 768, 1024 or 1440 px
   badge in words, review reasons in plain words, a "Missing checkout: incomplete" marker, the faculty decision with
   reason, who and when, and an "Outdated decision, new evidence arrived" marker when the decision is no longer current.
 - In-person faculty observations are listed separately, in a purple box titled "In-person observations by faculty".
+- A "Students" page lists every student and whether a phone is linked, with a two-step "Reset phone"
+  button for a lost, replaced or reinstalled phone.
+- New review reasons in plain words: "Head-turn check failed", "Fake GPS was on", "Same exact spot as
+  an earlier check-in", "Rooted phone", "Running on an emulator".
 - It refreshes every 5 seconds while the tab is visible, never overlaps requests, pauses when the tab is hidden,
   and keeps the last good data with a warning if a refresh fails.
 - A "What this system does and does not prove" page is linked from the register and the header. No confidence

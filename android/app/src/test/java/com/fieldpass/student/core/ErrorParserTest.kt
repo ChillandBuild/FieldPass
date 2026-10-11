@@ -29,6 +29,13 @@ class ErrorParserTest {
         for ((wire, expected) in contract) assertEquals(wire, expected, ErrorParser.fromHttp(400, body(wire)).code)
     }
 
+    @Test fun `phone lock codes map to their own errors`() {
+        assertEquals(ErrorCode.DEVICE_MISMATCH, ErrorCode.fromWire("device_mismatch"))
+        assertEquals(ErrorCode.DEVICE_TAKEN, ErrorCode.fromWire("device_taken"))
+        assertEquals(ErrorCode.DEVICE_KEY_REQUIRED, ErrorCode.fromWire("device_key_required"))
+        assertEquals(ErrorCode.BAD_SIGNATURE, ErrorCode.fromWire("bad_signature"))
+    }
+
     @Test fun carriesHttpStatusAndServerMessage() {
         val e = ErrorParser.fromHttp(410, body("attempt_expired"))
         assertEquals(410, e.httpStatus)

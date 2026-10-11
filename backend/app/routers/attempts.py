@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import secrets
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
@@ -7,11 +8,12 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app import clock, errors, rules
+from app import clock, devices, errors, liveness, rules
 from app.config import Settings
 from app.db import get_session
+from app.device_keys import canonical_message, location_fingerprint, verify_signature
 from app.deps import get_face_engine, get_photo_store
-from app.face import FaceEngine
+from app.face import NO_MATCH, FaceAnalysis, FaceEngine
 from app.geo import regions_verdict
 from app.models import Activity, Attempt, AttendanceEvent, CheckpointWindow, Enrollment, User, new_id
 from app.photo_store import PhotoStore
@@ -25,6 +27,9 @@ router = APIRouter(tags=["attempts"])
 
 # A reading stamped more than this far ahead of the server clock cannot be fresh; it is rejected as stale.
 LOCATION_FUTURE_TOLERANCE_SECONDS = 5
+
+# Directions are the student's own left and right.
+HEAD_TURNS = ("left", "right")
 
 
 def _approved_enrollment(session: Session, student_id: str) -> Enrollment:
@@ -60,12 +65,14 @@ def create_attempt(
         id=new_id("att"), student_id=student.id, activity_id=activity.id, action=body.action,
         checkpoint_id=checkpoint_id, created_at=now,
         expires_at=now + timedelta(seconds=settings.attempt_ttl_seconds),
+        nonce=secrets.token_urlsafe(16), challenge=secrets.choice(HEAD_TURNS),
     )
     session.add(attempt)
     session.commit()
     return AttemptOut(
         id=attempt.id, activity_id=attempt.activity_id, action=attempt.action, created_at=clock.to_iso(now),
         expires_at=clock.to_iso(attempt.expires_at), checkpoint_id=checkpoint_id,
+        nonce=attempt.nonce, challenge=attempt.challenge,
     )
 
 
@@ -77,8 +84,29 @@ def _face_verdict(engine: FaceEngine, store: PhotoStore, enrollment: Enrollment,
     return engine.compare(store.decrypt(enrollment.embedding_enc), probe)
 
 
+def _liveness_reasons(
+    engine: FaceEngine, straight: FaceAnalysis, turn_bytes: bytes, challenge: str, limits: liveness.LivenessLimits
+) -> list[str]:
+    """Photo B must be one face, the same person as photo A, turned the way the server asked."""
+    turned = engine.analyze(turn_bytes)
+    if turned.count != 1 or turned.embedding is None or straight.embedding is None:
+        return ["liveness_failed"]
+    if engine.compare(straight.embedding, turned.embedding) == NO_MATCH:
+        return ["liveness_failed"]
+    ok = liveness.head_turn_ok(straight.nose_offset, turned.nose_offset, challenge, limits)
+    return [] if ok else ["liveness_failed"]
+
+
+def _integrity_reasons(is_mock: bool, rooted: bool, emulator: bool, repeated: bool) -> list[str]:
+    """Phone-reported red flags, in the fixed order the dashboard shows them."""
+    flags = (("location_mocked", is_mock), ("location_repeated", repeated),
+             ("device_rooted", rooted), ("device_emulator", emulator))
+    return [reason for reason, raised in flags if raised]
+
+
 def _build_event(
-    attempt: Attempt, activity: Activity, now: datetime, loc: tuple[str, int, int, datetime], face: str
+    attempt: Attempt, activity: Activity, now: datetime, loc: tuple[str, int, int, datetime], face: str,
+    extra_reasons: list[str], fingerprint: str | None,
 ) -> AttendanceEvent:
     loc_verdict, distance, accuracy, captured = loc
     reasons = []
@@ -86,11 +114,13 @@ def _build_event(
         reasons.append(f"location_{loc_verdict}")
     if face != "match":
         reasons.append("face_mismatch" if face == "no_match" else "face_uncertain")
+    reasons.extend(extra_reasons)
     return AttendanceEvent(
         id=new_id("evt"), attempt_id=attempt.id, activity_id=activity.id, student_id=attempt.student_id,
         action=attempt.action, status="recorded" if not reasons else "needs_review", received_at=now,
         checkpoint_id=attempt.checkpoint_id, review_reasons=",".join(reasons), location_verdict=loc_verdict,
         distance_m=distance, accuracy_m=accuracy, captured_at=captured, face_verdict=face,
+        location_fingerprint=fingerprint,
     )
 
 
@@ -121,6 +151,15 @@ def _persist(session: Session, event: AttendanceEvent, enrollment_id: str) -> At
     return event
 
 
+def _require_signed(session: Session, attempt: Attempt, message: bytes, signature: str) -> None:
+    """The submit must be signed by the phone bound to this student (reset since the attempt: mismatch)."""
+    key = devices.bound_key(session, attempt.student_id)
+    if key is None:
+        raise errors.device_not_bound()
+    if not verify_signature(key, message, signature):
+        raise errors.bad_signature()
+
+
 @router.post("/attempts/{attempt_id}/submit", response_model=AttendanceEventOut)
 def submit_attempt(
     attempt_id: str,
@@ -129,6 +168,11 @@ def submit_attempt(
     lng: float = Form(..., ge=-180, le=180),
     accuracy_m: float = Form(..., ge=0, le=100000),
     location_captured_at: datetime = Form(...),
+    turn_photo: UploadFile = File(...),
+    location_is_mock: bool = Form(...),
+    device_rooted: bool = Form(...),
+    device_emulator: bool = Form(...),
+    signature: str = Form(..., min_length=1, max_length=200),
     student: User = Depends(require_student),
     session: Session = Depends(get_session),
     settings: Settings = Depends(get_settings_dep),
@@ -147,11 +191,23 @@ def submit_attempt(
     if now > attempt.expires_at:
         raise errors.attempt_expired()
     captured = clock.parse_iso(location_captured_at.isoformat())
+    selfie_bytes = read_image(selfie)
+    turn_bytes = read_image(turn_photo)
+    message = canonical_message(
+        attempt_id=attempt.id, nonce=attempt.nonce, selfie=selfie_bytes, turn_photo=turn_bytes,
+        lat=lat, lng=lng, accuracy_m=accuracy_m, captured_at=captured,
+        is_mock=location_is_mock, rooted=device_rooted, emulator=device_emulator,
+    )
+    _require_signed(session, attempt, message, signature)
+    # Judge and store exactly what was signed: the signature covers these rounded values, not the raw form.
+    lat, lng = round(lat, 6), round(lng, 6)
+    accuracy_m = round(accuracy_m, 1)
+    captured = captured.replace(microsecond=0)
     age_seconds = (now - captured).total_seconds()
     if age_seconds > settings.location_max_age_seconds or age_seconds < -LOCATION_FUTURE_TOLERANCE_SECONDS:
         raise errors.location_stale()
-    # Selfie bytes stay in memory only; they are never written anywhere by this code.
-    analysis = require_one_face(engine, read_image(selfie))
+    # Photo bytes stay in memory only; they are never written anywhere by this code.
+    analysis = require_one_face(engine, selfie_bytes)
     activity = get_activity(session, attempt.activity_id)
     enrollment = _approved_enrollment(session, student.id)
     events, windows = _student_state(session, activity.id, student.id)
@@ -172,5 +228,9 @@ def submit_attempt(
     if face == "no_match":
         # A clearly different face is refused outright: nothing is saved and the attempt stays open.
         raise errors.face_not_matched()
-    saved = _persist(session, _build_event(attempt, activity, now, loc, face), enrollment.id)
+    fingerprint = location_fingerprint(lat, lng)
+    repeated = any(e.location_fingerprint == fingerprint for e in events)
+    extra = _liveness_reasons(engine, analysis, turn_bytes, attempt.challenge, liveness.limits_from(settings))
+    extra += _integrity_reasons(location_is_mock, device_rooted, device_emulator, repeated)
+    saved = _persist(session, _build_event(attempt, activity, now, loc, face, extra, fingerprint), enrollment.id)
     return event_out(saved)

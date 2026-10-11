@@ -3,6 +3,7 @@
 # Usage: android/scripts/integration-test.sh [port]   (default 8001)
 # Two runs, each on a fresh backend: default settings (BackendContractTest), then ATTEMPT_TTL_SECONDS=4 and
 # CHECKOUT_GRACE_MINUTES=0 (TimingContractTest). Exits non-zero if either fails.
+# Head-turn limits opened wide: the sample face has no turned-head photo.
 # Uses a temp database and photo dir, the real OpenCV face engine, and deletes everything on exit.
 # Never prints secrets: SEED_PASSWORD (students) and FACULTY_SEED_PASSWORD (faculty1) are read from
 # backend/.env (or the environment) and passed on via env.
@@ -20,8 +21,22 @@ cleanup() {
 trap cleanup EXIT
 
 PY="$BACKEND/.venv/bin/python"
+[ -x "$PY" ] || PY="$BACKEND/.venv/Scripts/python.exe"
 [ -x "$PY" ] || { echo "backend venv missing: see backend/README.md" >&2; exit 1; }
-[ -f "$BACKEND/models/face_detection_yunet_2023mar.onnx" ] || "$PY" "$BACKEND/scripts/download_models.py"
+
+# SAFETY: backend/.env may hold a REAL production DATABASE_URL / SUPABASE_*. Every backend process this script
+# starts (seed, uvicorn, model download) gets these three blanked, after any caller-supplied settings, so the
+# throw-away SQLite database is always used. The guard below proves it before anything starts.
+BLANK_REMOTE=(DATABASE_URL= SUPABASE_URL= SUPABASE_SERVICE_KEY=)
+EFFECTIVE="$(cd "$BACKEND" && env "${BLANK_REMOTE[@]}" "$PY" -c '
+from app.config import load_settings
+s = load_settings()
+print(f"database_url={s.database_url!r} supabase_url={s.supabase_url!r} supabase_service_key_set={bool(s.supabase_service_key)}")
+raise SystemExit(1 if (s.database_url or s.supabase_url or s.supabase_service_key) else 0)
+')" || { echo "refusing to run: a remote database or Supabase setting is still active (${EFFECTIVE:-settings failed to load})" >&2; exit 1; }
+echo "[integration] effective remote settings: $EFFECTIVE"
+
+[ -f "$BACKEND/models/face_detection_yunet_2023mar.onnx" ] || (cd "$BACKEND" && env "${BLANK_REMOTE[@]}" "$PY" "$BACKEND/scripts/download_models.py")
 
 # Face image: sample from backend/tests/samples, else OpenCV's lena.jpg into the temp dir.
 FACE="$BACKEND/tests/samples/lena.jpg"
@@ -45,8 +60,8 @@ FACULTY_PASSWORD="$(read_setting FACULTY_SEED_PASSWORD)"
 start_backend() {
   local data="$TMP/data-$1"; shift
   mkdir -p "$data"
-  (cd "$BACKEND" && env DATABASE_PATH="$data/fieldpass.db" PHOTO_DIR="$data/photos" "$@" "$PY" -m app.seed >/dev/null)
-  (cd "$BACKEND" && exec env DATABASE_PATH="$data/fieldpass.db" PHOTO_DIR="$data/photos" "$@" \
+  (cd "$BACKEND" && env DATABASE_PATH="$data/fieldpass.db" PHOTO_DIR="$data/photos" "$@" "${BLANK_REMOTE[@]}" "$PY" -m app.seed >/dev/null)
+  (cd "$BACKEND" && exec env DATABASE_PATH="$data/fieldpass.db" PHOTO_DIR="$data/photos" "$@" "${BLANK_REMOTE[@]}" \
     "$PY" -m uvicorn app.main:app --host 127.0.0.1 --port "$PORT" >"$data/server.log" 2>&1) &
   SERVER_PID=$!
   for _ in $(seq 1 40); do
@@ -80,13 +95,13 @@ run_tests() {
 # Run 1: default settings (90 s attempts, 15/30 minute windows): the 20 contract steps.
 echo "[integration] run 1: default backend settings"
 RESULT=0
-start_backend default
+start_backend default LIVENESS_FRONT_MAX_OFFSET=9 LIVENESS_TURN_MIN_OFFSET=-9
 run_tests BackendContractTest || RESULT=1
 stop_backend
 
 # Run 2: short settings so attempt expiry and a missing check-out happen after a few real seconds.
 echo "[integration] run 2: ATTEMPT_TTL_SECONDS=4, CHECKOUT_GRACE_MINUTES=0"
-start_backend short ATTEMPT_TTL_SECONDS=4 CHECKOUT_GRACE_MINUTES=0
+start_backend short ATTEMPT_TTL_SECONDS=4 CHECKOUT_GRACE_MINUTES=0 LIVENESS_FRONT_MAX_OFFSET=9 LIVENESS_TURN_MIN_OFFSET=-9
 run_tests TimingContractTest FIELDPASS_SHORT_TIMING=1 || RESULT=1
 stop_backend
 

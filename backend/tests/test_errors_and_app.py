@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from app import main as main_module
 from app.config import ConfigError
 from app.main import create_app
-from tests.helpers import P
+from tests.helpers import P, new_device_key
 
 
 def assert_envelope(resp, status, code):
@@ -63,7 +63,8 @@ def test_cors_allows_configured_origin_only(client):
 
 def test_logs_never_contain_passwords_or_tokens(client, caplog):
     with caplog.at_level(logging.DEBUG):
-        body = client.post(f"{P}/auth/login", json={"username": "student1", "password": "test-seed-password"}).json()
+        body = client.post(f"{P}/auth/login", json={"username": "student1", "password": "test-seed-password",
+                                                          "device_public_key": new_device_key()[1]}).json()
         client.get(f"{P}/auth/me", headers={"Authorization": f"Bearer {body['access_token']}"})
         client.post(f"{P}/auth/login", json={"username": "student1", "password": "wrong-password-xyz"})
     assert "test-seed-password" not in caplog.text and "wrong-password-xyz" not in caplog.text

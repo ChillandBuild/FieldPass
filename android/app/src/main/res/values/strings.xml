@@ -28,6 +28,11 @@
     <string name="reason_location_outside">Your location reading was outside the activity area. Phone location can be off by a lot indoors.</string>
     <string name="reason_face_mismatch">The photo needs a person to compare it with your approved photo.</string>
     <string name="reason_face_uncertain">The photo was not clear enough to check automatically.</string>
+    <string name="reason_liveness_failed">The head-turn step could not be checked. Next time, turn your head the way the app asks, in good light.</string>
+    <string name="reason_location_mocked">Your phone reported a fake-GPS (mock location) app. Turn it off before checking in.</string>
+    <string name="reason_location_repeated">Your location was exactly the same as at an earlier check-in, which is unusual for real GPS.</string>
+    <string name="reason_device_rooted">Your phone looks rooted, so its readings need a person to check them.</string>
+    <string name="reason_device_emulator">The app was running on an emulator, not a real phone.</string>
     <string name="reasons_heading">Why faculty will look at this</string>
 
     <string name="action_check_in">Check in</string>

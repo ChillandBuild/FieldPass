@@ -8,6 +8,7 @@ import { ActivityCreateScreen } from './screens/ActivityCreateScreen'
 import { EnrollmentsScreen } from './screens/EnrollmentsScreen'
 import { LoginScreen } from './screens/LoginScreen'
 import { RegisterScreen } from './screens/RegisterScreen'
+import { StudentsScreen } from './screens/StudentsScreen'
 
 export function App() {
   const { user, isRestoring } = useSession()
@@ -20,6 +21,7 @@ export function App() {
         <Route path="/activities" element={<ActivitiesScreen />} />
         <Route path="/activities/new" element={<ActivityCreateScreen />} />
         <Route path="/activities/:activityId" element={<RegisterScreen />} />
+        <Route path="/students" element={<StudentsScreen />} />
         <Route path="/about" element={<AboutScreen />} />
         <Route path="*" element={<Navigate to="/enrollments" replace />} />
       </Route>

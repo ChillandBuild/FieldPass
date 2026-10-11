@@ -123,10 +123,22 @@ visible on every screen. Release builds cannot enable fixture mode.
   edge, JPEG quality 85, and wiped after upload or cancel.
 - A lost response retries the same attempt ID; a new attempt is created only after the user chooses
   "Start again" following expiry.
+- First login creates a signing key inside the phone's Keystore and links this phone to the student.
+  Every check-in is signed with it. Reinstalling the app or clearing its data makes a new key: faculty
+  must press "Reset phone" on the dashboard's Students page before the student can log in again.
+- Check-in is guided: look straight (photo), blink, turn your head to the side shown (second photo).
+  Face detection for the guide runs on the phone with the bundled ML Kit model — no internet, no Play
+  Store download. The second photo is checked by the server and never stored.
+- The app reports three flags with each check-in: fake-GPS location, rooted phone, emulator.
 
 ## Known limitations
 
-- Camera capture is not liveness detection. A photo of a photo may pass.
+- The blink and head turn are not liveness detection. A replayed video with the right turn may pass.
+- The guided camera uses preview, photo and frame analysis together; a few very old phones cannot.
+  They fall back to "Take one photo instead", which faculty see as "Head-turn check failed".
+- The head-turn direction constant (`YAW_SIGN_FOR_LEFT = 1f` in `LivenessGuide.kt`) is a guess and the server
+  thresholds (front 0.12, turn 0.25, `LIVENESS_MIRRORED`, `TURN_MIN_YAW_DEG`) were never calibrated: the guided
+  check-in and the phone lock have not been run on a real phone or a real Keystore.
 - Location can be spoofed on the phone.
 - Recorded times are points of observation, not proof of continuous presence.
 - Not yet run on a physical device. The HTTP/repository layer has been run on the JVM against the real

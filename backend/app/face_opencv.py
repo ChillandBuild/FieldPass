@@ -16,6 +16,7 @@ import numpy as np
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from app.face import FaceAnalysis, verdict_from_score
+from app.liveness import nose_offset_from_landmarks
 
 log = logging.getLogger("fieldpass")
 DETECTOR_FILE = "face_detection_yunet_2023mar.onnx"
@@ -84,8 +85,9 @@ class OpenCVFaceEngine:
                 return FaceAnalysis(count=len(faces))
             aligned = self._recognizer.alignCrop(bgr, faces[0])
             feature = self._recognizer.feature(aligned)
+            offset = nose_offset_from_landmarks(faces[0])
         embedding = np.asarray(feature, dtype=np.float32).reshape(1, -1).tobytes()
-        return FaceAnalysis(count=1, embedding=embedding, normalized_jpeg=_to_jpeg(img))
+        return FaceAnalysis(count=1, embedding=embedding, normalized_jpeg=_to_jpeg(img), nose_offset=offset)
 
     def compare(self, enrolled: bytes, probe: bytes) -> str:
         a = np.frombuffer(enrolled, dtype=np.float32).reshape(1, -1).copy()

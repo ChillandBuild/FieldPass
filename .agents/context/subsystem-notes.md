@@ -18,12 +18,15 @@
 ## Face engine
 - Real: `face_opencv.py` (models in `backend/models/*.onnx`, ~39 MB, gitignored, fetched by `scripts/download_models.py`). Tests use `FakeFaceEngine` via `dependency_overrides[get_face_engine]`.
 - Threshold 0.363 is the OpenCV sample default; uncertain margin 0.1 is our own guess. Neither is validated (known-limitations 10–13).
+- Head turn: `liveness.py` uses the nose offset from YuNet landmarks; sign depends on photo mirroring (`LIVENESS_MIRRORED`). Real-engine test harnesses open the limits wide (`LIVENESS_FRONT_MAX_OFFSET=9`, `LIVENESS_TURN_MIN_OFFSET=-9`) because no turned-head sample photo exists. Thresholds (front 0.12, turn 0.25) are uncalibrated on real faces; the two real-engine tests have never run (sample photos `backend/tests/samples/*.jpg` absent).
 
 ## Database (SQLite vs Postgres/Supabase)
 - Selected purely by `DATABASE_URL` being non-empty. Accepts postgres://, postgresql://, postgresql+psycopg://; normalised to psycopg 3.
 - Targets Supabase's **session pooler** (port 5432). sslmode=require for non-local hosts. Pool 5+5. Advisory lock on schema init. Tables live in `DATABASE_SCHEMA` via `schema_translate_map`.
 - `TEST_DATABASE_URL` switches the whole pytest suite to Postgres; `tests/test_postgres.py` skips without it.
 - Error messages must never echo the URL (contains the password).
+- **Settings trap:** the settings loader reads `backend/.env` (real `DATABASE_URL`/`SUPABASE_*`) even for scripts that only set `DATABASE_PATH`, and an EMPTY environment variable overrides the `.env` value. Any script or test harness that boots the backend must blank `DATABASE_URL`, `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` (`android/scripts/integration-test.sh` and `dashboard/e2e/support/backend.ts` now do). Two accidental runs wrote test data into the production Supabase DB before this was found (see [[active-backlog]]).
+- Anti-cheat A adds columns; `create_all` never adds columns to existing tables, so existing DBs need the `ALTER TABLE` statements in `contracts/API.md` or a reset.
 - The README and known-limitations still describe SQLite only: see [[active-backlog]].
 
 ## Contracts are generated
@@ -39,3 +42,6 @@
 - Never run on a physical phone yet (camera orientation, permissions, GPS time, Keystore, hotspot untested; known-limitations 17).
 - Needs `ANDROID_HOME=/opt/homebrew/share/android-commandlinetools` or `android/local.properties` (gitignored).
 - Phone clock skew can cause `location_stale`.
+- Phone key lives in the Keystore (`fieldpass_device_key`); reinstall = new key = faculty reset. The signed text must match `backend/app/device_keys.py` byte for byte (shared test vector in all three test suites; numbers formatted with `Locale.US`).
+- Test helpers nudge latitude by 0.000001° per submit, otherwise every test check-in is flagged `location_repeated`.
+- `YAW_SIGN_FOR_LEFT = 1f` in `LivenessGuide.kt` is a guess; real-phone sign check owed (Task 16 Step 2).

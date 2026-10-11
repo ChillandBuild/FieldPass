@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { api, UNAUTHENTICATED_EVENT, type User } from '../api'
+import { api, isApiError, UNAUTHENTICATED_EVENT, type User } from '../api'
 import { getToken, setToken } from '../api/config'
 
 export type LoginOutcome = { ok: true } | { ok: false; reason: 'not_faculty' }
@@ -45,7 +45,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [logout])
 
   const login = useCallback(async (username: string, password: string): Promise<LoginOutcome> => {
-    const res = await api.login(username, password)
+    let res
+    try {
+      res = await api.login(username, password)
+    } catch (err) {
+      // The server asks a student login for a phone key, which the dashboard never has.
+      if (isApiError(err) && err.code === 'device_key_required') {
+        logout()
+        return { ok: false, reason: 'not_faculty' }
+      }
+      throw err
+    }
     if (res.user.role !== 'faculty') {
       logout()
       return { ok: false, reason: 'not_faculty' }

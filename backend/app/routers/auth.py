@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app import clock, errors
+from app import clock, devices, errors
 from app.config import Settings
 from app.db import get_session
 from app.deps import get_rate_limiter
@@ -40,6 +40,8 @@ def login(
     ok = verify_password(user.password_hash if user else _DUMMY_HASH, body.password)
     if user is None or not ok:
         raise errors.invalid_credentials()
+    if user.role == "student":
+        devices.bind_or_check(session, user.id, body.device_public_key, clock.now())
     token, expires = create_token(settings, user)
     return LoginOut(access_token=token, expires_at=clock.to_iso(expires), user=user_out(user))
 

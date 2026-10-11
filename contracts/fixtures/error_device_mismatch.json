@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "device_mismatch",
+    "message": "This account is linked to another phone. Ask faculty to reset your device."
+  }
+}

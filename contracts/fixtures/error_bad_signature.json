@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "bad_signature",
+    "message": "This check-in could not be verified from your phone. Start again."
+  }
+}

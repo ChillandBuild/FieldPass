@@ -13,7 +13,7 @@
     <string name="attempt_poor_retry">Try again for a better fix</string>
     <string name="attempt_poor_anyway">Submit anyway (may need faculty review)</string>
     <string name="attempt_selfie_heading">Take a selfie</string>
-    <string name="attempt_selfie_body">Location ready. Now take a clear photo of your face.</string>
+    <string name="attempt_selfie_body">Location ready. Follow the three steps on screen. The app takes the photos for you.</string>
     <string name="attempt_ready_heading">Ready to send</string>
     <string name="attempt_send">Send</string>
     <string name="attempt_sending">Sending</string>

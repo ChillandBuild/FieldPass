@@ -85,7 +85,7 @@ fun AppNavigation(
                 key = "capture-$id-${action.name}",
                 factory = viewModelFactory {
                     initializer {
-                        AttendanceCaptureViewModel(id, action, container.repository, container.location, SystemClock::elapsedRealtime)
+                        AttendanceCaptureViewModel(id, action, container.repository, container.location, container.integrity, SystemClock::elapsedRealtime)
                     }
                 },
             )

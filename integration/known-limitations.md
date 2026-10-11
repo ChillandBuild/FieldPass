@@ -83,5 +83,14 @@ yet tested.
     often large, which produces `location_uncertain` for students who really are in the room. The radius of an
     existing activity cannot be edited through the API contract; create a new activity instead.
 21. **Prototype.** This was built for a demo. It has had no external security review or load testing.
+22. **A modified app on a rooted phone can lie about the phone flags.** The fake-GPS, rooted and emulator flags
+    come from the app itself. The rooted flag and `location_repeated` are the backstop. Full cover needs Google
+    Play Integrity, which needs internet and Play Store distribution; this demo runs offline from a sideloaded APK.
+23. **A replayed video with the right head turn can pass.** The blink is checked on the phone only; the server
+    checks the turn direction on a second photo.
+24. **Head-turn thresholds are starting values.** `LIVENESS_FRONT_MAX_OFFSET` (0.12), `LIVENESS_TURN_MIN_OFFSET`
+    (0.25) and `LIVENESS_MIRRORED` are calibrated with team photos before the demo (`scripts/nose_offset.py`).
+25. **Reinstalling the app or clearing its data needs a faculty reset.** The phone key lives in the Android
+    Keystore and is lost with the app's data; the dashboard Students page has **Reset phone**.
 
 Where this list and `contracts/API.md` or the per-part READMEs disagree, fix the document that is wrong and tell the team.

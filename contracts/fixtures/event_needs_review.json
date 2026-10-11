@@ -1,7 +1,7 @@
 {
-  "id": "evt_5b43835fcd0a",
-  "attempt_id": "att_9e091367b41a",
-  "activity_id": "act_8b5be8c749c0",
+  "id": "evt_34446c3d69a9",
+  "attempt_id": "att_0057993918ab",
+  "activity_id": "act_4dd8c4544aeb",
   "student_id": "u_s2",
   "action": "check_in",
   "status": "needs_review",
@@ -9,7 +9,7 @@
   "checkpoint_id": null,
   "review_reasons": [
     "location_uncertain",
-    "face_mismatch"
+    "face_uncertain"
   ],
   "location": {
     "verdict": "uncertain",
@@ -18,6 +18,6 @@
     "captured_at": "2026-10-10T09:33:55Z"
   },
   "face": {
-    "verdict": "no_match"
+    "verdict": "uncertain"
   }
 }

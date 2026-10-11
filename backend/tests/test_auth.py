@@ -3,11 +3,12 @@ from __future__ import annotations
 import jwt
 import pytest
 
-from tests.helpers import P, PASSWORD
+from tests.helpers import P, PASSWORD, new_device_key
 
 
 def test_login_success_returns_token_and_user(client):
-    resp = client.post(f"{P}/auth/login", json={"username": "student1", "password": PASSWORD})
+    resp = client.post(f"{P}/auth/login", json={"username": "student1", "password": PASSWORD,
+                                                "device_public_key": new_device_key()[1]})
     body = resp.json()
     assert resp.status_code == 200
     assert body["token_type"] == "bearer"
@@ -119,7 +120,8 @@ def test_ip_limit_also_blocks_the_real_account_from_that_ip(client):
 
     for i in range(LoginRateLimiter().ip_max_tries):
         client.post(f"{P}/auth/login", json={"username": f"user{i}", "password": "bad"})
-    resp = client.post(f"{P}/auth/login", json={"username": "student1", "password": PASSWORD})
+    resp = client.post(f"{P}/auth/login", json={"username": "student1", "password": PASSWORD,
+                                                "device_public_key": new_device_key()[1]})
     assert resp.status_code == 429 and resp.json()["error"]["code"] == "too_many_attempts"
 
 

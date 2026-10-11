@@ -12,6 +12,7 @@ Action = Literal["check_in", "checkpoint", "check_out"]
 AttendanceStatus = Literal["recorded", "needs_review", "confirmed", "not_confirmed"]
 LocationVerdict = Literal["inside", "uncertain", "outside"]
 FaceVerdict = Literal["match", "uncertain", "no_match"]
+HeadTurn = Literal["left", "right"]
 ObservationType = Literal["present", "absent", "left_early", "other"]
 
 
@@ -27,6 +28,14 @@ class UserOut(BaseModel):
     username: str
     full_name: str
     role: Role
+
+
+class StudentOut(UserOut):
+    device_bound_at: str | None
+
+
+class StudentList(BaseModel):
+    items: list[StudentOut]
 
 
 class LoginOut(BaseModel):
@@ -150,6 +159,8 @@ class AttemptOut(BaseModel):
     created_at: str
     expires_at: str
     checkpoint_id: str | None
+    nonce: str
+    challenge: HeadTurn
 
 
 class RegisterOut(BaseModel):
@@ -188,6 +199,8 @@ class ErrorOut(BaseModel):
 class LoginIn(BaseModel):
     username: str = Field(min_length=1, max_length=100)
     password: str = Field(min_length=1, max_length=200)
+    # Students only: Base64 SubjectPublicKeyInfo of the phone's Keystore key. Faculty omit it.
+    device_public_key: str | None = Field(default=None, max_length=512)
 
 
 class ApproveIn(BaseModel):

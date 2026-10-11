@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "device_key_required",
+    "message": "Update the FieldPass app. This version cannot sign in."
+  }
+}

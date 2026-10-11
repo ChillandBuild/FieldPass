@@ -3,13 +3,13 @@ from __future__ import annotations
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app import clock, errors, rules
 from app.db import get_session
-from app.models import Activity, CheckpointWindow, RosterEntry, User, VenueRegion, new_id
-from app.schemas import ActivityIn, ActivityList, ActivityOut, CheckpointIn, CheckpointWindowOut, UserList
+from app.models import Activity, CheckpointWindow, RosterEntry, StudentDevice, User, VenueRegion, new_id
+from app.schemas import ActivityIn, ActivityList, ActivityOut, CheckpointIn, CheckpointWindowOut, StudentList, StudentOut, UserList
 from app.config import Settings
 from app.security import current_user, get_settings_dep, require_faculty
 from app.views import build_activity, build_record, load_activity_data, user_out, window_out
@@ -39,10 +39,27 @@ def render_activity(session: Session, activity: Activity, viewer: User, timing: 
     return build_activity(load_activity_data(session, activity), now, None)
 
 
-@router.get("/students", response_model=UserList)
-def list_students(_: User = Depends(require_faculty), session: Session = Depends(get_session)) -> UserList:
+def _student_out(session: Session, student: User) -> StudentOut:
+    device = session.get(StudentDevice, student.id)
+    return StudentOut(**user_out(student).model_dump(), device_bound_at=clock.to_iso(device.bound_at) if device else None)
+
+
+@router.get("/students", response_model=StudentList)
+def list_students(_: User = Depends(require_faculty), session: Session = Depends(get_session)) -> StudentList:
     rows = session.scalars(select(User).where(User.role == "student").order_by(User.username))
-    return UserList(items=[user_out(u) for u in rows])
+    return StudentList(items=[_student_out(session, u) for u in rows])
+
+
+@router.post("/students/{student_id}/device/reset", response_model=StudentOut)
+def reset_device(
+    student_id: str, _: User = Depends(require_faculty), session: Session = Depends(get_session),
+) -> StudentOut:
+    student = session.get(User, student_id)
+    if student is None or student.role != "student":
+        raise errors.not_found("That student does not exist.")
+    session.execute(delete(StudentDevice).where(StudentDevice.student_id == student_id))
+    session.commit()
+    return _student_out(session, student)
 
 
 @router.post("/activities", response_model=ActivityOut, status_code=201)
