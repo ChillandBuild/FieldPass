@@ -1,5 +1,5 @@
 import type { AttendanceStatus, ReviewReason } from '../src/api'
-import { observationLabel, reasonLabel, statusLabel } from '../src/lib/labels'
+import { PRESENCE_VERIFIED_LABEL, observationLabel, reasonLabel, statusLabel } from '../src/lib/labels'
 
 describe('status labels', () => {
   const cases: [AttendanceStatus | null, string][] = [
@@ -37,4 +37,11 @@ describe('review reason labels', () => {
 
 describe('observation labels', () => {
   it('labels left_early', () => expect(observationLabel('left_early')).toBe('Left early'))
+})
+
+describe('presence label', () => {
+  it('says what happened without claiming proof', () => {
+    expect(PRESENCE_VERIFIED_LABEL).toBe('Code scanned')
+    expect(PRESENCE_VERIFIED_LABEL.toLowerCase()).not.toMatch(/verified|proof|confidence|live/)
+  })
 })

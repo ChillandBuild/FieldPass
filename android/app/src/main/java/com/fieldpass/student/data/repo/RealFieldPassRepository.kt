@@ -12,6 +12,7 @@ import com.fieldpass.student.core.model.Attempt
 import com.fieldpass.student.core.model.Enrollment
 import com.fieldpass.student.core.model.LocationFix
 import com.fieldpass.student.core.model.LoginRequest
+import com.fieldpass.student.core.model.PresenceRequest
 import com.fieldpass.student.core.model.Role
 import com.fieldpass.student.core.model.SubmitEvidence
 import com.fieldpass.student.core.model.User
@@ -90,6 +91,9 @@ class RealFieldPassRepository(
                 signature = text(signer.sign(message)),
             )
         }
+
+    override suspend fun submitPresenceCode(attemptId: String, code: String): Boolean =
+        call { api.presence(attemptId, PresenceRequest(code)) }.verified
 
     private suspend fun <T> call(block: suspend () -> T): T = try {
         block()

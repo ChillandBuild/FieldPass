@@ -1,7 +1,7 @@
 {
-  "id": "evt_5321975ddea3",
-  "attempt_id": "att_f2e9836a8c9a",
-  "activity_id": "act_4dd8c4544aeb",
+  "id": "evt_ee5b6c971f7d",
+  "attempt_id": "att_357febfd5b3c",
+  "activity_id": "act_844f60243baf",
   "student_id": "u_s1",
   "action": "check_in",
   "status": "recorded",
@@ -16,5 +16,6 @@
   },
   "face": {
     "verdict": "match"
-  }
+  },
+  "presence_verified": true
 }

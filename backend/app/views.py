@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app import rules
 from app.clock import to_iso
 from app.models import (
-    Activity, AttendanceEvent, CheckpointWindow, Decision, Enrollment, Observation, RosterEntry, User,
+    Activity, AttendanceEvent, CheckpointWindow, Decision, Enrollment, Observation, PresenceScan, RosterEntry, User,
 )
 from app.schemas import (
     ActivityOut, AttendanceEventOut, AttendanceRecordOut, CheckpointWindowOut, DecisionOut, EnrollmentOut,
@@ -36,7 +36,13 @@ def enrollment_out(student: User, enrollment: Enrollment | None, decider: User |
     )
 
 
-def event_out(event: AttendanceEvent) -> AttendanceEventOut:
+def has_presence_scan(session: Session, attempt_id: str, by: datetime | None = None) -> bool:
+    """True when the attempt has a scan. With `by`, only a scan stored no later than that moment counts."""
+    scan = session.get(PresenceScan, attempt_id)
+    return scan is not None and (by is None or scan.verified_at <= by)
+
+
+def event_out(event: AttendanceEvent, presence_verified: bool) -> AttendanceEventOut:
     return AttendanceEventOut(
         id=event.id, attempt_id=event.attempt_id, activity_id=event.activity_id, student_id=event.student_id,
         action=event.action, status=event.status, received_at=to_iso(event.received_at),
@@ -47,6 +53,7 @@ def event_out(event: AttendanceEvent) -> AttendanceEventOut:
             accuracy_m=event.accuracy_m, captured_at=to_iso(event.captured_at),
         ),
         face=FaceOut(verdict=event.face_verdict),
+        presence_verified=presence_verified,
     )
 
 
@@ -61,6 +68,7 @@ class ActivityData:
     events: dict[str, list[AttendanceEvent]] = field(default_factory=lambda: defaultdict(list))
     decisions: dict[str, list[Decision]] = field(default_factory=lambda: defaultdict(list))
     observations: dict[str, list[Observation]] = field(default_factory=lambda: defaultdict(list))
+    scanned_attempts: set[str] = field(default_factory=set)  # attempts of these events that have a presence scan
 
 
 def load_activity_data(session: Session, activity: Activity, student_id: str | None = None) -> ActivityData:
@@ -76,6 +84,12 @@ def load_activity_data(session: Session, activity: Activity, student_id: str | N
         order = {AttendanceEvent: "received_at", Decision: "decided_at", Observation: "observed_at"}[model]
         for row in session.scalars(query.order_by(getattr(model, order), model.id)):
             bucket[row.student_id].append(row)
+    scans = select(PresenceScan.attempt_id).join(AttendanceEvent, AttendanceEvent.attempt_id == PresenceScan.attempt_id)
+    # A scan that lost a race with submit is stored after the event; it changed nothing, so it is not shown.
+    scans = scans.where(AttendanceEvent.activity_id == activity.id, PresenceScan.verified_at <= AttendanceEvent.received_at)
+    if student_id:
+        scans = scans.where(AttendanceEvent.student_id == student_id)
+    data.scanned_attempts = set(session.scalars(scans))
     wanted = {activity.created_by_id, *roster, *(w.opened_by_id for w in windows)}
     wanted |= {d.actor_id for rows in data.decisions.values() for d in rows}
     wanted |= {o.actor_id for rows in data.observations.values() for o in rows}
@@ -118,12 +132,16 @@ def build_record(
     check_in = next((e for e in events if e.action == "check_in"), None)
     check_out = next((e for e in events if e.action == "check_out"), None)
     ordered = sorted(decisions, key=lambda d: d.decided_at)
+
+    def shown(event: AttendanceEvent) -> AttendanceEventOut:
+        return event_out(event, event.attempt_id in data.scanned_attempts)
+
     return AttendanceRecordOut(
         activity_id=data.activity.id, activity_name=data.activity.name, student=user_out(student),
         status=rules.derive_status(decisions, events),
-        check_in=event_out(check_in) if check_in else None,
-        checkpoints=[event_out(e) for e in events if e.action == "checkpoint"],
-        check_out=event_out(check_out) if check_out else None,
+        check_in=shown(check_in) if check_in else None,
+        checkpoints=[shown(e) for e in events if e.action == "checkpoint"],
+        check_out=shown(check_out) if check_out else None,
         missing_checkout=rules.missing_checkout(data.activity, events, now, timing),
         complete=rules.is_complete(events),
         review_reasons=rules.union_reasons(events),

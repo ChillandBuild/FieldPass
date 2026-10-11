@@ -99,6 +99,14 @@ class Attempt(Base):
     challenge: Mapped[str] = mapped_column(String)
 
 
+class PresenceScan(Base):
+    """A fresh presence (QR) code was scanned for this attempt. One row at most; it only ever helps the attempt."""
+
+    __tablename__ = "presence_scans"
+    attempt_id: Mapped[str] = mapped_column(ForeignKey("attempts.id"), primary_key=True)
+    verified_at: Mapped[datetime] = mapped_column(UTCDateTime)
+
+
 class AttendanceEvent(Base):
     """One automated observation. UNIQUE(attempt_id) makes submit idempotent."""
 

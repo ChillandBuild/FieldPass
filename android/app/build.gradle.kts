@@ -154,6 +154,7 @@ dependencies {
     implementation(libs.camerax.camera2)
     implementation(libs.camerax.lifecycle)
     implementation(libs.camerax.view)
+    implementation(libs.mlkit.barcode.scanning)
     implementation(libs.play.services.location)
     implementation(libs.coroutines.android)
     implementation(libs.coroutines.play.services)

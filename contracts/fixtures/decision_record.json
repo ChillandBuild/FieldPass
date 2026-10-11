@@ -1,5 +1,5 @@
 {
-  "activity_id": "act_4dd8c4544aeb",
+  "activity_id": "act_844f60243baf",
   "activity_name": "Site Visit",
   "student": {
     "id": "u_s2",
@@ -9,9 +9,9 @@
   },
   "status": "confirmed",
   "check_in": {
-    "id": "evt_34446c3d69a9",
-    "attempt_id": "att_0057993918ab",
-    "activity_id": "act_4dd8c4544aeb",
+    "id": "evt_21a51b5f73a1",
+    "attempt_id": "att_83d4f9da6132",
+    "activity_id": "act_844f60243baf",
     "student_id": "u_s2",
     "action": "check_in",
     "status": "needs_review",
@@ -29,7 +29,8 @@
     },
     "face": {
       "verdict": "uncertain"
-    }
+    },
+    "presence_verified": false
   },
   "checkpoints": [],
   "check_out": null,
@@ -40,7 +41,7 @@
     "face_uncertain"
   ],
   "decision": {
-    "id": "dec_41489c4cea61",
+    "id": "dec_df0083787693",
     "decision": "confirmed",
     "reason": "Seen on site all morning",
     "actor_name": "Dr. Meera Rao",
@@ -49,7 +50,7 @@
   },
   "decision_history": [
     {
-      "id": "dec_41489c4cea61",
+      "id": "dec_df0083787693",
       "decision": "confirmed",
       "reason": "Seen on site all morning",
       "actor_name": "Dr. Meera Rao",
@@ -59,8 +60,8 @@
   ],
   "observations": [
     {
-      "id": "obs_441826c659bb",
-      "activity_id": "act_4dd8c4544aeb",
+      "id": "obs_cd9f5be1035a",
+      "activity_id": "act_844f60243baf",
       "student_id": "u_s2",
       "observation_type": "present",
       "note": "Signed the paper sheet",

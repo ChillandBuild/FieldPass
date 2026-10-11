@@ -4,8 +4,9 @@ Student app for FieldPass: enrol a face photo, check in, answer checkpoints and 
 activities. The backend is the only judge of attendance; this app only collects evidence and shows
 the server's decision. The API contract is `../contracts/API.md`.
 
-Stack: Kotlin 2.4, Jetpack Compose (Material 3), Navigation Compose, CameraX (front camera, in-app
-capture only), Fused Location Provider, Retrofit + OkHttp + kotlinx.serialization, coroutines.
+Stack: Kotlin 2.4, Jetpack Compose (Material 3), Navigation Compose, CameraX (front camera for the selfie,
+back camera for the optional code scan; in-app capture only), ML Kit face detection and QR scanning (bundled
+models), Fused Location Provider, Retrofit + OkHttp + kotlinx.serialization, coroutines.
 Android Gradle Plugin 9.4.1, Gradle 9.6.1, compileSdk 37, targetSdk 36, minSdk 26. Versions live in
 `gradle/libs.versions.toml`.
 
@@ -192,6 +193,11 @@ visible on every screen. Release builds cannot enable fixture mode.
 - Check-in is guided: look straight (photo), blink, turn your head to the side shown (second photo).
   Face detection for the guide runs on the phone with the bundled ML Kit model — no internet, no Play
   Store download. The second photo is checked by the server and never stored.
+- Rotating presence code (optional): after the location fix, the app opens the back camera and asks the student to
+  scan the QR on the faculty screen (it changes every 10 s). A scanned string that starts with `fp1.` is sent once to
+  `POST /api/v1/attempts/{id}/presence`; the server says whether it was fresh. Skipping, a too-old code, a network error
+  or a phone with no back camera never blocks the selfie and submit. The step has no timer of its own; the attempt's
+  90 s countdown keeps running. A verified scan shows as "Code scanned" on the result and in history.
 - The app reports three flags with each check-in: fake-GPS location, rooted phone, emulator.
 
 ## Known limitations
@@ -202,6 +208,8 @@ visible on every screen. Release builds cannot enable fixture mode.
 - The head-turn direction constant (`YAW_SIGN_FOR_LEFT = 1f` in `LivenessGuide.kt`) is a guess and the server
   thresholds (front 0.12, turn 0.25, `LIVENESS_MIRRORED`, `TURN_MIN_YAW_DEG`) were never calibrated: the guided
   check-in and the phone lock have not been run on a real phone or a real Keystore.
+- QR scanning has only been run on the JVM (state machine and API wiring). The scanner itself has not been tried against
+  a real faculty screen on a physical phone.
 - Location can be spoofed on the phone.
 - Recorded times are points of observation, not proof of continuous presence.
 - Not yet run on a physical device. The HTTP/repository layer has been run on the JVM against the real

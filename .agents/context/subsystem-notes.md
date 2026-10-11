@@ -35,6 +35,11 @@
 - `contracts/fixtures/*.json` come from `backend/scripts/generate_fixtures.py` (fake engine, fixed clock); `contracts/openapi.yaml` from `export_openapi.py`. **Regenerate both after any API change.**
 - API.md Addendum quirks: each enrollment upload makes a new id (old one 404s); `next_actions` ignores enrollment state; CSV cells starting `= + - @` get a leading `'`; faculty1 password comes from FACULTY_SEED_PASSWORD (overrides the main text).
 
+## Presence code (QR)
+- Made in `backend/app/presence.py` (pure, from `JWT_SECRET` + activity id + `clock.now()`); stateless, nothing stored per code. Changing `JWT_SECRET` invalidates shown codes (they rotate anyway). Step length: `PRESENCE_CODE_STEP_SECONDS` (5-60, default 10); valid for the current and previous step.
+- Only `POST /attempts/{id}/presence` writes (table `presence_scans`, new table, no ALTER). A scan clears `location_uncertain` only (`_build_event` in `routers/attempts.py`), and only when submitted `accuracy_m` <= `PRESENCE_CODE_MAX_ACCURACY_M` (default 150): accuracy is phone-reported, so uncapped it let a far phone claim a huge figure to turn `outside` into `uncertain`. Do not remove the cap; `location_outside` and every other reason are untouched, and a bad code never errors or adds a reason.
+- `presence_verified` on events comes from one extra query in `views.load_activity_data` (`scanned_attempts`), not per event; only scans with `verified_at <= received_at` count (a scan that loses a race with submit is not shown). Postgres RLS is automatic (`_lock_down_schema` loops over every table in the schema).
+
 ## Dashboard
 - `VITE_USE_FIXTURES=true` shows a fixture banner; must be false/absent for the real backend.
 - Server address is set on the login screen and stored in localStorage; the auth token is in sessionStorage only.

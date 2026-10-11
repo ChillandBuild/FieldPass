@@ -24,4 +24,5 @@ class SwitchableRepository(
     override suspend fun attendanceHistory() = active.attendanceHistory()
     override suspend fun createAttempt(activityId: String, action: Action) = active.createAttempt(activityId, action)
     override suspend fun submitAttempt(attempt: Attempt, evidence: SubmitEvidence) = active.submitAttempt(attempt, evidence)
+    override suspend fun submitPresenceCode(attemptId: String, code: String) = active.submitPresenceCode(attemptId, code)
 }

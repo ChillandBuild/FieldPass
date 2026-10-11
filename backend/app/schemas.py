@@ -91,6 +91,7 @@ class AttendanceEventOut(BaseModel):
     review_reasons: list[str]
     location: LocationOut
     face: FaceOut
+    presence_verified: bool
 
 
 class DecisionOut(BaseModel):
@@ -169,6 +170,17 @@ class AttemptOut(BaseModel):
     checkpoint_id: str | None
     nonce: str
     challenge: HeadTurn
+
+
+class PresenceCodeOut(BaseModel):
+    code: str
+    expires_at: str
+    server_time: str
+    step_seconds: int
+
+
+class PresenceOut(BaseModel):
+    verified: bool
 
 
 class RegisterOut(BaseModel):
@@ -266,6 +278,10 @@ class CheckpointIn(BaseModel):
 
 class AttemptIn(BaseModel):
     action: Action
+
+
+class PresenceIn(BaseModel):
+    code: str = Field(min_length=1, max_length=200)
 
 
 class DecisionIn(BaseModel):

@@ -1,10 +1,10 @@
 {
-  "id": "att_649e7e292adc",
-  "activity_id": "act_4dd8c4544aeb",
+  "id": "att_962e8bf183b8",
+  "activity_id": "act_844f60243baf",
   "action": "check_in",
   "created_at": "2026-10-10T09:31:00Z",
   "expires_at": "2026-10-10T09:32:30Z",
   "checkpoint_id": null,
-  "nonce": "Q8bHJmxaTlclbJjHB79Jog",
-  "challenge": "left"
+  "nonce": "9iO5tscXAmhwFCq2_Tf1Qg",
+  "challenge": "right"
 }

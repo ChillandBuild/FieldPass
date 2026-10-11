@@ -4,13 +4,14 @@ import { FACULTY, STUDENTS, emptyRecord, makeDecision } from './fixtureData'
 import { recomputeRecord, seedRegisterRows } from './fixtureRegisters'
 import { seedActivities, seedEnrollments } from './fixtureData'
 import type {
-  Activity, Api, AttendanceRecord, CheckpointWindow, Enrollment, Observation, Student, User,
+  Activity, Api, AttendanceRecord, CheckpointWindow, Enrollment, Observation, PresenceCode, Student, User,
 } from './types'
 
 const MIN = 60_000
 const DAY = 24 * 60 * MIN
 const LATENCY_MS = 120
 const iso = (ms: number): string => new Date(ms).toISOString().replace(/\.\d{3}Z$/, 'Z')
+const PRESENCE_STEP_SECONDS = 10
 const wait = (): Promise<void> => new Promise((r) => setTimeout(r, LATENCY_MS))
 
 // The fixture store is private to this module. Public methods return fresh copies.
@@ -89,6 +90,28 @@ function csvFor(a: Activity, rows: AttendanceRecord[]): string {
     [r.student.full_name, r.student.username, r.status ?? '', r.check_in?.received_at ?? '', r.checkpoints.length,
       r.check_out?.received_at ?? '', r.missing_checkout].join(','))
   return [`# ${a.name}`, head, ...lines].join('\n') + '\n'
+}
+
+/** Small stable hash (two FNV-1a passes) so the fixture code looks opaque but is repeatable. */
+function fixtureSignature(text: string): string {
+  let a = 0x811c9dc5
+  let b = 0x01000193
+  for (const ch of text) {
+    a = Math.imul(a ^ ch.charCodeAt(0), 0x01000193) >>> 0
+    b = Math.imul(b + ch.charCodeAt(0), 0x85ebca6b) >>> 0
+  }
+  return `${a.toString(36)}${b.toString(36)}`.padEnd(16, 'x')
+}
+
+function fixturePresenceCode(activityId: string, now: number): PresenceCode {
+  const stepMs = PRESENCE_STEP_SECONDS * 1000
+  const step = Math.floor(now / stepMs)
+  return {
+    code: `fp1.${step}.${fixtureSignature(`${activityId}:${step}`)}`,
+    expires_at: new Date((step + 1) * stepMs).toISOString(),
+    server_time: new Date(now).toISOString(),
+    step_seconds: PRESENCE_STEP_SECONDS,
+  }
 }
 
 export const fixtureApi: Api = {
@@ -208,6 +231,15 @@ export const fixtureApi: Api = {
     await wait(); requireFaculty()
     const a = withOpenCheckpoint(findActivity(activityId))
     return copy({ activity: a, server_time: iso(Date.now()), rows: store.rows[activityId] ?? [] })
+  },
+  getPresenceCode: async (activityId) => {
+    await wait(); requireFaculty()
+    const a = findActivity(activityId)
+    const now = Date.now()
+    if (now < Date.parse(a.starts_at) || now >= Date.parse(a.ends_at)) {
+      throw new ApiError('outside_activity_window', 'This activity is not running', 409)
+    }
+    return fixturePresenceCode(a.id, now)
   },
   decide: async (activityId, studentId, input) => {
     await wait(); requireFaculty()

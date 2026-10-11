@@ -35,6 +35,7 @@ open class StubRepository : FieldPassRepository {
     override suspend fun createAttempt(activityId: String, action: Action): Attempt = error("not stubbed")
     override suspend fun submitAttempt(attempt: Attempt, evidence: SubmitEvidence): AttendanceEvent =
         error("not stubbed")
+    override suspend fun submitPresenceCode(attemptId: String, code: String): Boolean = error("not stubbed")
 }
 
 /** Location provider that replays queued fixes or errors in order. */

@@ -4,6 +4,7 @@ import { api, messageForError } from '../api'
 import { BoundarySummary } from '../components/BoundarySummary'
 import { CheckpointControl } from '../components/CheckpointControl'
 import { Empty, Loading, Notice } from '../components/Notice'
+import { PresenceCodeControl } from '../components/PresenceCodeControl'
 import { RegisterRow } from '../components/RegisterRow'
 import { useAsyncAction } from '../hooks/useAsyncAction'
 import { usePolling } from '../hooks/usePolling'
@@ -86,7 +87,10 @@ export function RegisterScreen() {
       {error ? <Notice kind="warn">Could not refresh just now: {messageForError(error)} Showing the last data received.</Notice> : null}
       {csv.error ? <Notice kind="error">{csv.error}</Notice> : null}
       {showBoundary ? <BoundarySummary activity={activity} /> : null}
-      <CheckpointControl activity={activity} onOpened={() => { void refresh() }} />
+      <div className="register-tools">
+        <CheckpointControl activity={activity} onOpened={() => { void refresh() }} />
+        <PresenceCodeControl activity={activity} />
+      </div>
       {rows.length === 0 ? <Empty>No students are on this roster.</Empty> : (
         <section aria-label="Attendance register">
           <ul className="list-plain register">

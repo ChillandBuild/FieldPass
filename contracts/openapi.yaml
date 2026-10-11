@@ -1152,6 +1152,72 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorOut'
+  /api/v1/activities/{activity_id}/presence-code:
+    get:
+      tags:
+      - activities
+      summary: Presence Code
+      description: 'The code the faculty screen shows as a QR. Nothing is stored:
+        it is recomputed from the secret.'
+      operationId: presence_code_api_v1_activities__activity_id__presence_code_get
+      parameters:
+      - name: activity_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Activity Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresenceCodeOut'
+        '422':
+          description: validation_error, unusable_capture, multiple_faces, location_stale,
+            device_key_required, face_not_matched
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: not_authenticated or invalid_credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '403':
+          description: forbidden, not_assigned, device_mismatch, device_taken or bad_signature
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: not_found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '409':
+          description: enrollment_not_approved, outside_activity_window, invalid_action_order,
+            checkpoint_not_open, already_decided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '410':
+          description: attempt_expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '413':
+          description: image_too_large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
   /api/v1/activities/{activity_id}/attempts:
     post:
       tags:
@@ -1248,6 +1314,78 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AttendanceEventOut'
+        '422':
+          description: validation_error, unusable_capture, multiple_faces, location_stale,
+            device_key_required, face_not_matched
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: not_authenticated or invalid_credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '403':
+          description: forbidden, not_assigned, device_mismatch, device_taken or bad_signature
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: not_found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '409':
+          description: enrollment_not_approved, outside_activity_window, invalid_action_order,
+            checkpoint_not_open, already_decided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '410':
+          description: attempt_expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '413':
+          description: image_too_large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+  /api/v1/attempts/{attempt_id}/presence:
+    post:
+      tags:
+      - attempts
+      summary: Scan Presence
+      description: 'A scanned code only ever helps: a wrong or stale one answers verified=false
+        and changes nothing.'
+      operationId: scan_presence_api_v1_attempts__attempt_id__presence_post
+      parameters:
+      - name: attempt_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Attempt Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PresenceIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresenceOut'
         '422':
           description: validation_error, unusable_capture, multiple_faces, location_stale,
             device_key_required, face_not_matched
@@ -1868,6 +2006,9 @@ components:
           $ref: '#/components/schemas/LocationOut'
         face:
           $ref: '#/components/schemas/FaceOut'
+        presence_verified:
+          type: boolean
+          title: Presence Verified
       type: object
       required:
       - id
@@ -1881,6 +2022,7 @@ components:
       - review_reasons
       - location
       - face
+      - presence_verified
       title: AttendanceEventOut
     AttendanceList:
       properties:
@@ -2354,6 +2496,47 @@ components:
       - actor_name
       - observed_at
       title: ObservationOut
+    PresenceCodeOut:
+      properties:
+        code:
+          type: string
+          title: Code
+        expires_at:
+          type: string
+          title: Expires At
+        server_time:
+          type: string
+          title: Server Time
+        step_seconds:
+          type: integer
+          title: Step Seconds
+      type: object
+      required:
+      - code
+      - expires_at
+      - server_time
+      - step_seconds
+      title: PresenceCodeOut
+    PresenceIn:
+      properties:
+        code:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Code
+      type: object
+      required:
+      - code
+      title: PresenceIn
+    PresenceOut:
+      properties:
+        verified:
+          type: boolean
+          title: Verified
+      type: object
+      required:
+      - verified
+      title: PresenceOut
     RegisterOut:
       properties:
         activity:

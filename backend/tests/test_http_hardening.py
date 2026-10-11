@@ -60,4 +60,4 @@ def test_docs_can_be_enabled_by_setting(settings, fake_engine):
 
 
 def test_openapi_document_is_still_buildable_without_the_route(app):
-    assert len(app.openapi()["paths"]) == 23
+    assert len(app.openapi()["paths"]) == 25

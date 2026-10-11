@@ -12,6 +12,13 @@
     <string name="attempt_poor_body">The phone says your location could be off by about this many metres: %1$d. Moving to an open area usually helps.</string>
     <string name="attempt_poor_retry">Try again for a better fix</string>
     <string name="attempt_poor_anyway">Submit anyway (may need faculty review)</string>
+    <string name="attempt_code_heading">Scan the code on the faculty screen</string>
+    <string name="attempt_code_body">Point the back camera at the code your faculty is showing. It changes every few seconds. This step is optional.</string>
+    <string name="attempt_code_skip">Skip</string>
+    <string name="attempt_code_checking">Checking the code</string>
+    <string name="attempt_code_too_old">That code was too old. Scan again.</string>
+    <string name="attempt_code_failed_note">Keep the camera on the code to try again, or skip this step.</string>
+    <string name="presence_code_scanned">Code scanned</string>
     <string name="attempt_selfie_heading">Take a selfie</string>
     <string name="attempt_selfie_body">Location ready. Follow the three steps on screen. The app takes the photos for you.</string>
     <string name="attempt_ready_heading">Ready to send</string>

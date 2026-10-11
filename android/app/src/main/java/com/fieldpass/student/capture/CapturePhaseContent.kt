@@ -11,6 +11,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.fieldpass.student.R
 import com.fieldpass.student.core.error.ErrorCode
@@ -34,6 +37,7 @@ fun CapturePhaseContent(state: CaptureUiState, vm: AttendanceCaptureViewModel, o
             }
             CapturePhase.LOCATION_FAILED -> LocationFailed(state.error ?: ErrorCode.LOCATION_TIMEOUT, vm)
             CapturePhase.POOR_ACCURACY -> PoorAccuracy(state, vm)
+            CapturePhase.AWAITING_CODE -> CodeStep(state, vm)
             CapturePhase.AWAITING_SELFIE -> SelfieStep(state, vm)
             CapturePhase.READY_TO_SUBMIT, CapturePhase.SUBMITTING -> ReadyToSend(state, vm)
             CapturePhase.DONE -> Done(state, onFinished)
@@ -79,10 +83,33 @@ private fun PoorAccuracy(state: CaptureUiState, vm: AttendanceCaptureViewModel) 
 }
 
 @Composable
+private fun CodeStep(state: CaptureUiState, vm: AttendanceCaptureViewModel) {
+    Text(stringResource(R.string.attempt_code_heading), style = MaterialTheme.typography.titleMedium)
+    Text(stringResource(R.string.attempt_code_body))
+    Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
+        when (state.codeStatus) {
+            CodeStatus.SCANNING -> Unit
+            CodeStatus.CHECKING -> Text(stringResource(R.string.attempt_code_checking))
+            CodeStatus.TOO_OLD -> Text(stringResource(R.string.attempt_code_too_old), color = MaterialTheme.colorScheme.error)
+            CodeStatus.FAILED -> {
+                state.error?.let { ErrorText(it) }
+                Text(stringResource(R.string.attempt_code_failed_note))
+            }
+        }
+    }
+    // Skip sits above the preview so it stays on screen without scrolling; it is also the way out if the camera is refused.
+    SecondaryButton(stringResource(R.string.attempt_code_skip), vm::skipCode)
+    PermissionGate(GatedPermission.CAMERA) {
+        CodeScanner(onCode = vm::onCodeScanned, onUnavailable = vm::skipCode)
+    }
+}
+
+@Composable
 private fun SelfieStep(state: CaptureUiState, vm: AttendanceCaptureViewModel) {
     if (state.attempt == null) return
     Text(stringResource(R.string.attempt_selfie_heading), style = MaterialTheme.typography.titleMedium)
     Text(stringResource(R.string.attempt_selfie_body))
+    if (state.codeVerified) Text(stringResource(R.string.presence_code_scanned), color = MaterialTheme.colorScheme.tertiary)
     state.error?.let { ErrorText(it) }
     Text(stringResource(R.string.camera_tips), style = MaterialTheme.typography.bodySmall)
     PermissionGate(GatedPermission.CAMERA) {
@@ -119,6 +146,7 @@ private fun Done(state: CaptureUiState, onFinished: () -> Unit) {
         SectionCard {
             StatusChip(event.status)
             Text(stringResource(StatusPresentation.meaning(event.status)))
+            if (event.presenceVerified) Text(stringResource(R.string.presence_code_scanned), style = MaterialTheme.typography.bodySmall)
             if (event.reviewReasons.isNotEmpty()) {
                 Text(stringResource(R.string.reasons_heading), style = MaterialTheme.typography.labelLarge)
                 event.reviewReasons.forEach { Text("- " + stringResource(StatusPresentation.reason(it)), style = MaterialTheme.typography.bodySmall) }

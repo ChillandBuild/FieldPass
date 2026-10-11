@@ -18,6 +18,7 @@ import com.fieldpass.student.core.model.LocationEvidence
 import com.fieldpass.student.core.model.HeadTurn
 import com.fieldpass.student.core.model.LocationFix
 import com.fieldpass.student.core.model.LocationVerdict
+import com.fieldpass.student.core.model.PresenceCode
 import com.fieldpass.student.core.model.ReviewReason
 import com.fieldpass.student.core.model.SubmitEvidence
 import com.fieldpass.student.core.model.Role
@@ -44,6 +45,7 @@ class FakeFieldPassRepository(
     )
     private val attempts = mutableMapOf<String, Attempt>()
     private val events = mutableMapOf<String, AttendanceEvent>()
+    private val presenceVerified = mutableSetOf<String>()
     private val sampleEvents = mutableListOf<AttendanceEvent>()
     private var counter = 0
 
@@ -132,10 +134,21 @@ class FakeFieldPassRepository(
                 if (inside) LocationVerdict.INSIDE else LocationVerdict.UNCERTAIN, 40.0, fix.accuracyM, fix.capturedAt,
             ),
             face = FaceEvidence(FaceVerdict.MATCH),
+            presenceVerified = attemptId in presenceVerified,
         )
         events[attemptId] = event
         sampleEvents += event
         return event
+    }
+
+    /** Any code that starts with the real format's prefix counts as fresh; there is no faculty screen in fixture mode. */
+    override suspend fun submitPresenceCode(attemptId: String, code: String): Boolean {
+        pause()
+        val stored = attempts[attemptId] ?: throw AppError(ErrorCode.NOT_FOUND)
+        if (Duration.between(Instant.parse(stored.createdAt), now()) > Duration.ofSeconds(90)) throw AppError(ErrorCode.ATTEMPT_EXPIRED)
+        val verified = code.startsWith(PresenceCode.PREFIX)
+        if (verified) presenceVerified += attemptId
+        return verified
     }
 
     private fun activeActivity(): Activity {
