@@ -21,8 +21,11 @@ yet tested.
 5. **Plain HTTP, on a private hotspot only.** Traffic between the phone, the dashboard and the backend is not
    encrypted. Passwords, tokens and selfies cross the network in the clear. Use only a network you control, and
    do not use real student data. The Android release build refuses plain HTTP; only the debug build works.
-6. **SQLite, one node.** The data is in one SQLite file on one laptop, served by one process. There is no
-   replication, no backup and no multi-server setup.
+6. **One node, no backup.** By default the data is in one SQLite file on one laptop. With `DATABASE_URL` set it is in
+   Supabase Postgres and the encrypted photos are in a private Supabase bucket (see `backend/README.md`, "Hosting").
+   Either way it is one backend process with no replication and no backup of our own, and the Supabase free plan
+   pauses an idle project. Render's free plan sleeps after 15 minutes, so the first request after a quiet spell
+   takes about a minute. Memory on Render is unmeasured.
 7. **No password reset or account management.** The four demo accounts come from the seed command. There is no way to
    reset a password, add a user or remove a user from the app or the dashboard. A password change is made by
    editing `backend/.env` and running the seed command again. Faculty and students use different seed passwords

@@ -1,6 +1,6 @@
 # FieldPass backend
 
-FastAPI + SQLite. The backend is the only judge of attendance: it compares a fresh selfie with
+FastAPI + SQLite (or Postgres on Supabase when `DATABASE_URL` is set; see Hosting). The backend is the only judge of attendance: it compares a fresh selfie with
 the approved enrollment photo, evaluates location evidence, records events and supports faculty
 review. The contract is `../contracts/API.md`; `../contracts/openapi.yaml` is exported from this code.
 
@@ -67,6 +67,71 @@ lives under `/api/v1` (health check: `curl http://<ip>:8000/api/v1/health`). The
 (`/docs`, `/redoc`) and `/openapi.json` are off by default; set `ENABLE_DOCS=true` in `.env` to serve them
 (they need no login). `scripts/export_openapi.py` works either way. For a dashboard served from another origin, add it to `CORS_ORIGINS` in `.env`.
 The connection is plain HTTP, so use a network you trust and do not use real student data.
+
+## Hosting (Render + Supabase + Vercel)
+
+```
+Student APK --https--> Render (this backend) --> Supabase Postgres (data) + private bucket (encrypted photos)
+Dashboard on Vercel --https--> Render
+```
+
+The phone and the dashboard talk only to the backend. Neither talks to Supabase, and no Supabase key goes into
+the APK or the dashboard bundle. The blueprint is `../render.yaml` (root directory `backend`, Python 3.11.9).
+
+Deploy order matters, because each step needs a value from the one before:
+
+1. **Supabase.** New project; note the database password. Create a **private** bucket named `enrollment-photos`
+   (the backend uploads to it but never creates it). Copy the **Session pooler** connection string (port 5432, not
+   the 6543 transaction pooler, not the direct connection, which is IPv6 only), the project URL and the
+   `service_role` key. You run no SQL: the backend creates the `fieldpass` schema and tables on first start and
+   turns on row-level security with no policies.
+2. **Render.** New > Blueprint from the repo, then fill in the settings below. The build installs
+   `requirements.txt`, downloads the two face models (about 39 MB) and runs `python -m app.seed`
+   (idempotent: creates `student1`..`student3` and `faculty1`, refreshes their password hashes). The service
+   starts with `uvicorn app.main:app --host 0.0.0.0 --port $PORT`; Render's health check is `/api/v1/health`.
+3. **Vercel.** Deploy `dashboard/` with `VITE_API_BASE_URL` set to the Render address (see `../dashboard/README.md`);
+   leave `VITE_USE_FIXTURES` unset.
+4. **Render again.** Put the exact Vercel origin in `CORS_ORIGINS` and redeploy or restart.
+5. **Android.** Build and sign the APK against the Render address (`../android/README.md`, "Release build").
+
+Generate the four secrets once with `python -m app.gen_secrets` (on any Python 3.11) and paste them into Render.
+Do not reuse the values from a laptop `.env`.
+
+| Setting | Required | Value on Render |
+|---|---|---|
+| `PYTHON_VERSION` | yes | `3.11.9` (set by the blueprint; Render needs a full x.y.z and defaults to a newer Python) |
+| `JWT_SECRET` | yes | From `gen_secrets`, at least 32 characters. Changing it signs everyone out |
+| `PHOTO_ENCRYPTION_KEY` | yes | Fernet key from `gen_secrets`. **Losing it makes stored photos unreadable**; keep a copy |
+| `SEED_PASSWORD` | yes | Password of `student1`..`student3`; must differ from the faculty one |
+| `FACULTY_SEED_PASSWORD` | yes | Password of `faculty1` |
+| `DATABASE_URL` | yes | Supabase session pooler string. Empty would mean SQLite on Render's disk, which is lost on every restart |
+| `DATABASE_SCHEMA` | no | `fieldpass` (default; lower-case identifier) |
+| `SUPABASE_URL` | yes | `https://<project-ref>.supabase.co`. Without it (and the key) photos go to the local disk and are lost on restart |
+| `SUPABASE_SERVICE_KEY` | yes | `service_role` key. Server-side only; never in the APK or dashboard |
+| `SUPABASE_PHOTO_BUCKET` | no | `enrollment-photos` (default); the bucket must exist and be private |
+| `CORS_ORIGINS` | yes | Comma-separated dashboard origins, e.g. `https://fieldpass-dashboard.vercel.app` (no trailing slash, no path) |
+| `ENABLE_DOCS` | no | `false` (default). `true` serves `/docs` and `/openapi.json` with no login |
+| `PORT` | set by Render | The start command binds to it |
+| `ATTEMPT_TTL_SECONDS`, `LOCATION_MAX_AGE_SECONDS`, `TOKEN_TTL_MINUTES`, `CHECKIN_LEAD_MINUTES`, `CHECKOUT_GRACE_MINUTES` | no | Leave at the defaults (see Timing settings) |
+| `FACE_MATCH_THRESHOLD`, `FACE_UNCERTAIN_MARGIN`, `FACE_DETECT_SCORE`, `LIVENESS_FRONT_MAX_OFFSET`, `LIVENESS_TURN_MIN_OFFSET`, `LIVENESS_MIRRORED` | no | Leave at the defaults until measured on real phones |
+| `DATABASE_PATH`, `PHOTO_DIR`, `MODEL_DIR` | no | Local-disk paths; unused when `DATABASE_URL` and the Supabase settings are set |
+
+Free-tier behaviour to expect (limits as published by the vendors on 2026-10-11; check them again before relying on them):
+
+- **Render free** stops the service after 15 minutes without traffic and wakes it on the next request, which takes
+  about a minute. The first login or check-in after a quiet spell can fail or time out; open
+  `/api/v1/health` in a browser first. It has 750 instance hours a month, one instance and no shell.
+- **Memory is not measured on Render.** The face engine loads at startup. On a Windows laptop (Python 3.12) the
+  process peaked near 250 MB after loading both models and analysing one blank image; the real figure on Render,
+  with uvicorn, real photos and password hashing, is expected to be higher. Check Render's metrics after the
+  first enrolment and check-in, and move to a paid instance if the service is restarted for memory.
+- **Supabase free** has a 500 MB database and 1 GB storage, and pauses a project with too little database
+  activity for about a week. A paused project makes every request fail until it is restored in the Supabase console.
+- Set up a fresh Supabase project for a hosted demo. A database that already holds test data keeps its bound
+  phone keys and test attempts. A database from before the anti-cheat changes also needs the `ALTER TABLE`
+  statements in `contracts/API.md`, because `create_all` never adds columns.
+- Photos and embeddings of real students are personal data. This is a prototype: do not use it for real
+  attendance decisions.
 
 ## Tests
 
@@ -141,7 +206,7 @@ These are small choices where the contract is silent; clients should not rely on
 - The face threshold has not been validated on a volunteer set. 0.363 is OpenCV's general default and the
   uncertain margin is a guess; measure real match and non-match scores before trusting it.
 - Real-face matching is only smoke-tested by hand; the automated suite uses a fake engine.
-- Plain HTTP, in-memory login rate limit (resets on restart; idle keys are dropped, at most 10,000 are kept),
-  SQLite, single process. A submit whose enrollment was replaced after its comparison is refused with
+- Plain HTTP on the LAN (https on Render), in-memory login rate limit (resets on restart; idle keys are dropped,
+  at most 10,000 are kept), single process. A submit whose enrollment was replaced after its comparison is refused with
   `409 enrollment_not_approved`.
 - Recorded times are points of observation, not proof of continuous presence.

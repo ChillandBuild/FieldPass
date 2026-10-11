@@ -34,7 +34,7 @@ Run from `android/`:
 ./gradlew assembleDebug        # app/build/outputs/apk/debug/app-debug.apk
 ./gradlew testDebugUnitTest    # JVM unit tests (state machine, errors, time, DTOs, API wiring)
 ./gradlew lintDebug            # report: app/build/reports/lint-results-debug.html
-./gradlew assembleRelease      # unsigned release APK (cleartext HTTP is blocked in release)
+./gradlew assembleRelease      # release APK, signed if a keystore is configured (see Release build); cleartext HTTP is blocked
 ```
 
 ## Contract tests against the real backend
@@ -85,6 +85,67 @@ store and the fused location provider; see Known limitations.
 adb devices                                   # the phone must be listed as "device"
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
+
+## Release build (signed APK to share)
+
+Students install a signed APK by tapping the file. It talks to the hosted backend over https, so it works on any
+network. Deploy the backend first (`../backend/README.md`, "Hosting"); you need its address, for example
+`https://fieldpass-api.onrender.com`. The Play Store is not used.
+
+**1. Create the keystore once** (JDK 17 or newer; if an old JDK is first on your PATH, call the new one by its full
+path). Keep it outside the repo; `*.keystore`, `*.jks` and `android/keystore.properties` are git-ignored.
+
+```bash
+keytool -genkeypair -v -keystore ~/fieldpass-release.keystore -alias fieldpass \
+  -keyalg RSA -keysize 2048 -validity 10000
+```
+
+It asks for a store password, a key password and your details. **Back up the keystore file and both passwords in
+two places** (for example a password manager and an offline copy). Android only installs an update over an
+installed app if both are signed by the same key. If you lose the keystore, every student must uninstall the app and
+install a new build; the uninstall deletes the phone's signing key, so faculty must also press "Reset phone" for each
+student. Never commit it or paste its passwords into chat, an issue or a build log.
+
+**2. Tell Gradle where it is**, either with environment variables:
+
+```bash
+export FIELDPASS_KEYSTORE=/path/to/fieldpass-release.keystore   # absolute path
+export FIELDPASS_KEYSTORE_PASSWORD=...
+export FIELDPASS_KEY_ALIAS=fieldpass
+export FIELDPASS_KEY_PASSWORD=...
+```
+
+or with an untracked `android/keystore.properties` (use forward slashes on Windows):
+
+```
+storeFile=C:/keys/fieldpass-release.keystore
+storePassword=...
+keyAlias=fieldpass
+keyPassword=...
+```
+
+Environment variables win over the file. With none set, `assembleRelease` still produces the unsigned APK, which
+phones refuse to install. With only some set, the build stops and names the missing ones.
+
+**3. Build**, from `android/`:
+
+```bash
+./gradlew assembleRelease -PfieldpassApiBaseUrl=https://fieldpass-api.onrender.com
+# -> app/build/outputs/apk/release/app-release.apk (signed)
+$ANDROID_HOME/build-tools/36.0.0/apksigner verify --print-certs app/build/outputs/apk/release/app-release.apk
+```
+
+The build refuses a missing or non-https address. Bump `versionCode` in `app/build.gradle.kts` for every APK you
+hand out: a phone will not install an APK over an installed one with an equal or lower `versionCode`.
+
+**4. Share the `.apk` file** (chat, drive, link). On the phone, open it and allow "install unknown apps" for the app
+that opened it. A debug build and a release build have different signatures, so uninstall one before installing the
+other (this also makes a new phone key; see Behaviour summary).
+
+The hosted backend on Render's free plan sleeps after 15 minutes without traffic, and the first request then takes
+about a minute, so the first login or check-in after a quiet spell can fail. Open the backend's `/api/v1/health`
+address in a browser first, or just retry. The release build, the signing and the whole hosted path have not been
+run on a physical phone yet.
 
 ## Server address
 

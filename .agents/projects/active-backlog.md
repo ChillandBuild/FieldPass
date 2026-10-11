@@ -4,7 +4,8 @@
 | task | priority | status |
 |---|---|---|
 | Run the Android app on a physical phone over the hotspot (camera, GPS, Keystore, cleartext) | high (before any demo) | open |
-| Document Postgres/Supabase in backend/README.md and update known-limitations #6 | medium | open |
+| Document Postgres/Supabase in backend/README.md and update known-limitations #6 | medium | done 2026-10-11 ("Hosting" section) |
+| Hosted deploy: Supabase, Render (`render.yaml`), Vercel, signed APK. Repo work done; the console checklist, memory on Render and everything on a phone are NOT verified | high | repo done, user runs console steps |
 | Add a CI pipeline (none exists; no .github) | medium | open |
 | Playwright coverage for dashboard stale-enrollment message (limitation 15) | low | open |
 | Duty zones P1: zones, seats, coordinator, zone-aware location (plan: duty-zones-plan.md) | high | open |

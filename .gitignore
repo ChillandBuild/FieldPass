@@ -30,6 +30,8 @@ android/.idea/
 android/.kotlin/
 *.apk
 *.keystore
+*.jks
+android/keystore.properties
 
 # misc
 .DS_Store

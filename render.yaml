@@ -1,37 +1,42 @@
-# Render Blueprint for the FieldPass backend. Secrets (sync: false) are entered in the Render dashboard.
-# Render's disk is ephemeral on the free plan, so use Supabase Postgres (DATABASE_URL) and
-# Supabase Storage (SUPABASE_*) instead of SQLite and local photos.
+# Render Blueprint for the FieldPass backend. Dashboard: Vercel. Database and photos: Supabase.
+# Values marked `sync: false` are asked for in the Render web console and never stored in git.
+# Deploy order and every setting: backend/README.md ("Hosting").
 services:
   - type: web
     name: fieldpass-api
     runtime: python
-    rootDir: backend
     plan: free
-    buildCommand: pip install -r requirements.txt && python scripts/download_models.py
+    rootDir: backend
+    # Seeding runs in the build (idempotent) because the free plan has no shell and a sleeping service should
+    # wake fast. If the build cannot reach DATABASE_URL, the deploy fails instead of starting a half-working server.
+    buildCommand: pip install -r requirements.txt && python scripts/download_models.py && python -m app.seed
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/v1/health
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.12.10
+      - key: PYTHON_VERSION # must be a full x.y.z; the backend requires 3.11
+        value: 3.11.9
+      # Secrets: generate with `python -m app.gen_secrets` and paste in the Render console.
       - key: JWT_SECRET
-        generateValue: true
+        sync: false
       - key: PHOTO_ENCRYPTION_KEY
         sync: false
       - key: SEED_PASSWORD
         sync: false
       - key: FACULTY_SEED_PASSWORD
         sync: false
+      # Supabase session pooler string (port 5432), the project address, and the server-side service key.
       - key: DATABASE_URL
         sync: false
-      - key: DATABASE_SCHEMA
-        value: public
       - key: SUPABASE_URL
-        value: https://dmjcjiihnvdrpqyckwlu.supabase.co
+        sync: false
       - key: SUPABASE_SERVICE_KEY
         sync: false
-      - key: SUPABASE_PHOTO_BUCKET
-        value: enrollment-photos
+      # Exact dashboard origin(s), comma-separated, no trailing slash. Set after the Vercel deploy.
       - key: CORS_ORIGINS
         sync: false
+      - key: DATABASE_SCHEMA
+        value: fieldpass
+      - key: SUPABASE_PHOTO_BUCKET
+        value: enrollment-photos
       - key: ENABLE_DOCS
-        value: "true"
+        value: "false"

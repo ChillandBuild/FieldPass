@@ -1,4 +1,5 @@
 import java.net.URI
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -26,6 +27,28 @@ tasks.configureEach {
         dependsOn(verifyReleaseApiBaseUrl)
     }
 }
+// Release signing comes from environment variables or the untracked android/keystore.properties; nothing secret is in git.
+// FIELDPASS_KEYSTORE / storeFile, FIELDPASS_KEYSTORE_PASSWORD / storePassword, FIELDPASS_KEY_ALIAS / keyAlias,
+// FIELDPASS_KEY_PASSWORD / keyPassword. With none of them set, release stays unsigned.
+val keystoreProps = Properties().apply {
+    val file = rootProject.file("keystore.properties")
+    if (file.isFile) file.inputStream().use { load(it) }
+}
+fun signingValue(envName: String, propName: String): String? =
+    System.getenv(envName)?.takeIf { it.isNotBlank() } ?: keystoreProps.getProperty(propName)?.takeIf { it.isNotBlank() }
+val signingValues = mapOf(
+    "FIELDPASS_KEYSTORE" to signingValue("FIELDPASS_KEYSTORE", "storeFile"),
+    "FIELDPASS_KEYSTORE_PASSWORD" to signingValue("FIELDPASS_KEYSTORE_PASSWORD", "storePassword"),
+    "FIELDPASS_KEY_ALIAS" to signingValue("FIELDPASS_KEY_ALIAS", "keyAlias"),
+    "FIELDPASS_KEY_PASSWORD" to signingValue("FIELDPASS_KEY_PASSWORD", "keyPassword"),
+)
+val releaseSigningConfigured = signingValues.values.all { it != null }
+if (!releaseSigningConfigured && signingValues.values.any { it != null }) {
+    throw GradleException(
+        "Release signing is partly configured. Missing: " +
+            signingValues.filterValues { it == null }.keys.joinToString(", ")
+    )
+}
 val apiBaseUrl: String = configuredApiBaseUrl ?: "http://192.168.43.10:8000"
 val fixtureDefault: String = (project.findProperty("fieldpassFixtureMode") as String?) ?: "false"
 
@@ -42,6 +65,17 @@ android {
         buildConfigField("String", "DEFAULT_API_BASE_URL", "\"$apiBaseUrl\"")
     }
 
+    signingConfigs {
+        if (releaseSigningConfigured) {
+            create("release") {
+                storeFile = rootProject.file(signingValues.getValue("FIELDPASS_KEYSTORE")!!)
+                storePassword = signingValues.getValue("FIELDPASS_KEYSTORE_PASSWORD")
+                keyAlias = signingValues.getValue("FIELDPASS_KEY_ALIAS")
+                keyPassword = signingValues.getValue("FIELDPASS_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             buildConfigField("boolean", "FIXTURE_AVAILABLE", "true")
@@ -50,6 +84,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            if (releaseSigningConfigured) signingConfig = signingConfigs.getByName("release")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             buildConfigField("boolean", "FIXTURE_AVAILABLE", "false")
             buildConfigField("boolean", "FIXTURE_DEFAULT", "false")
