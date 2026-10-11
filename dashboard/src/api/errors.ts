@@ -9,6 +9,7 @@ export type ApiErrorCode =
   | 'invalid_action_order'
   | 'checkpoint_not_open'
   | 'already_decided'
+  | 'already_enrolled'
   | 'attempt_expired'
   | 'image_too_large'
   | 'validation_error'
@@ -47,6 +48,7 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   invalid_action_order: 'That action is not allowed right now. A checkpoint window may already be open.',
   checkpoint_not_open: 'There is no open checkpoint window.',
   already_decided: 'This enrollment has already been approved or rejected.',
+  already_enrolled: 'This student already has an enrollment photo.',
   attempt_expired: 'That attempt has expired.',
   image_too_large: 'The photo is too large.',
   validation_error: 'Some fields are missing or invalid. Check the form and try again.',

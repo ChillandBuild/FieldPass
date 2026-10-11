@@ -58,10 +58,19 @@ describe('Students page', () => {
   it('uploading a photo creates a pending enrollment and says it still needs approval', async () => {
     render(<StudentsScreen />)
     const file = new File(['jpeg-bytes'], 'asha.jpg', { type: 'image/jpeg' })
-    await userEvent.upload(within(await row('Kabir Menon')).getByLabelText('Enrollment photo file for Kabir Menon'), file)
-    expect(await screen.findByText(/Uploaded a photo for Kabir Menon\. Approve it on the Enrollments page/)).toBeInTheDocument()
+    await userEvent.upload(within(await row('Fatima Khan')).getByLabelText('Enrollment photo file for Fatima Khan'), file)
+    expect(await screen.findByText(/Uploaded a photo for Fatima Khan\. Approve it on the Enrollments page/)).toBeInTheDocument()
     const pending = await fixtureApi.listEnrollments('pending')
-    expect(pending.find((e) => e.student.username === 'student4')?.status).toBe('pending')
+    expect(pending.find((e) => e.student.username === 'student3')?.status).toBe('pending')
+    expect(await within(await row('Fatima Khan')).findByRole('button', { name: /Upload enrollment photo/ })).toBeDisabled()
+  })
+
+  it('locks the upload once a student has a photo', async () => {
+    render(<StudentsScreen />)
+    const kabir = await row('Kabir Menon')
+    const button = await within(kabir).findByRole('button', { name: /Upload enrollment photo/ })
+    await vi.waitFor(() => expect(button).toBeDisabled())
+    expect(button).toHaveTextContent('Photo uploaded')
   })
 
   it('a failed upload shows the friendly error', async () => {

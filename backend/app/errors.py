@@ -55,6 +55,10 @@ def checkpoint_not_open() -> ApiError:
     return ApiError(409, "checkpoint_not_open", "There is no open checkpoint for you to answer.")
 
 
+def already_enrolled() -> ApiError:
+    return ApiError(409, "already_enrolled", "This student already has an enrollment photo.")
+
+
 def already_decided() -> ApiError:
     return ApiError(409, "already_decided", "This enrollment has already been decided.")
 

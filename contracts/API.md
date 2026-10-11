@@ -409,9 +409,11 @@ df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c
 
 - No phone bound for the student (reset after the attempt was created): `403 device_mismatch`.
   Signature does not verify: `403 bad_signature`. Both are checked before `location_stale`.
-- **One-photo fallback.** The Android "Take one photo instead" path sends the same photo bytes as both `selfie` and
-  `turn_photo`. The server accepts this (it is never refused); the event is `needs_review` with `liveness_failed`,
-  so nobody is locked out and faculty decide.
+- **One photo.** The Android app takes a single photo and sends the same bytes as both `selfie` and `turn_photo`;
+  there is no head-turn step. With `LIVENESS_REQUIRED=true` (the server default) the server compares the two photos,
+  so a one-photo check-in is `needs_review` with `liveness_failed` and faculty decide. With `LIVENESS_REQUIRED=false`
+  (set for the demo) the head-turn check is skipped: the event is judged on face and location only and
+  `liveness_failed` is never produced. Nobody is refused either way.
 - Submitting an attempt that already has an event returns that event without checking the new signature
   (a phone that lost the response can safely retry).
 

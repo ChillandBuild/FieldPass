@@ -11,13 +11,14 @@ interface RowProps {
   student: Student
   isAsking: boolean
   isBusy: boolean
+  hasPhoto: boolean
   onAsk: () => void
   onCancel: () => void
   onConfirm: () => void
   onUpload: (file: File) => void
 }
 
-function StudentRow({ student, isAsking, isBusy, onAsk, onCancel, onConfirm, onUpload }: RowProps) {
+function StudentRow({ student, isAsking, isBusy, hasPhoto, onAsk, onCancel, onConfirm, onUpload }: RowProps) {
   const bound = student.device_bound_at
   const picker = useRef<HTMLInputElement>(null)
   return (
@@ -43,10 +44,10 @@ function StudentRow({ student, isAsking, isBusy, onAsk, onCancel, onConfirm, onU
         type="button"
         className="btn"
         onClick={() => picker.current?.click()}
-        disabled={isBusy}
+        disabled={isBusy || hasPhoto}
         aria-label={`Upload enrollment photo for ${student.full_name}`}
       >
-        Upload photo
+        {hasPhoto ? 'Photo uploaded' : 'Upload photo'}
       </button>
       {bound && !isAsking ? (
         <button type="button" className="btn" onClick={onAsk} aria-label={`Reset phone for ${student.full_name}`}>
@@ -67,6 +68,8 @@ function StudentRow({ student, isAsking, isBusy, onAsk, onCancel, onConfirm, onU
 /** Faculty see which phone each student is locked to, and unlink it when a student changes phone. */
 export function StudentsScreen() {
   const { data, isLoading, error, reload } = useLoad(() => api.listStudents())
+  const enrollments = useLoad(() => api.listEnrollments())
+  const withPhoto = new Set((enrollments.data ?? []).map((e) => e.student.id))
   const [askingId, setAskingId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState<string | null>(null)
@@ -94,6 +97,7 @@ export function StudentsScreen() {
     try {
       await api.uploadEnrollment(student.id, file)
       setDone(`Uploaded a photo for ${student.full_name}. Approve it on the Enrollments page before they can check in.`)
+      enrollments.reload()
     } catch (err) {
       setDone(null)
       setFailure(messageForError(err))
@@ -122,6 +126,7 @@ export function StudentsScreen() {
             student={s}
             isAsking={askingId === s.id}
             isBusy={busy}
+            hasPhoto={withPhoto.has(s.id)}
             onAsk={() => { setAskingId(s.id); setDone(null); setFailure(null) }}
             onCancel={() => setAskingId(null)}
             onConfirm={() => { void confirmReset(s) }}

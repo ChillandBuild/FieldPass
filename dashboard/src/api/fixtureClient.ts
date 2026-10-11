@@ -130,6 +130,9 @@ export const fixtureApi: Api = {
     const student = STUDENTS.find((s) => s.id === studentId)
     if (!student) throw new ApiError('not_found', 'No such student', 404)
     if (photo.size === 0) throw new ApiError('unusable_capture', 'The image could not be used.', 422)
+    if (store.enrollments.some((e) => e.student.id === studentId)) {
+      throw new ApiError('already_enrolled', 'This student already has an enrollment photo.', 409)
+    }
     store = { ...store, counter: store.counter + 1 }
     const fresh: Enrollment = {
       id: `enr_fixture_${store.counter}`, status: 'pending', student: copy(student),

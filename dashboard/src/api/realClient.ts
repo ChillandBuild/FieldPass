@@ -22,7 +22,7 @@ import type {
 const KNOWN_CODES: readonly string[] = [
   'invalid_credentials', 'not_authenticated', 'forbidden', 'not_assigned', 'not_found',
   'enrollment_not_approved', 'outside_activity_window', 'invalid_action_order',
-  'checkpoint_not_open', 'already_decided', 'attempt_expired', 'image_too_large',
+  'checkpoint_not_open', 'already_decided', 'already_enrolled','attempt_expired', 'image_too_large',
   'validation_error', 'unusable_capture', 'multiple_faces', 'location_stale',
   'device_key_required',
 ]
